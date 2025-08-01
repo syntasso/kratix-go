@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/syntasso/go-sdk/status"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -13,7 +12,7 @@ type ResourceAccessor interface {
 	// GetValue queries the resource and returns the value at the specified path e.g. spec.dbConfig.size
 	GetValue(string) (any, error)
 	// GetStatus queries the resource and returns the resource.status
-	GetStatus(string) (status.Status, error)
+	GetStatus(string) (StatusModifier, error)
 	// GetName queries the resource and returns the name
 	GetName() string
 	// GetStatus queries the resource and returns the namespace
@@ -46,7 +45,7 @@ func (r *Resource) GetValue(path string) (any, error) {
 }
 
 // GetStatus returns the Status at the provided path.
-func (r *Resource) GetStatus(path string) (status.Status, error) {
+func (r *Resource) GetStatus(path string) (StatusModifier, error) {
 	parts := []string{"status"}
 	if path != "" {
 		parts = append(parts, strings.Split(path, ".")...)
@@ -59,7 +58,7 @@ func (r *Resource) GetStatus(path string) (status.Status, error) {
 	if !ok {
 		m = map[string]any{}
 	}
-	return &status.Status{data: m}, nil
+	return &Status{data: m}, nil
 }
 
 // GetName returns the resource name.
