@@ -1,0 +1,8 @@
+apiVersion: promise.example.io/v1
+kind: MyPromise
+metadata:
+  name: my-promise
+spec:
+  appRunner: knative
+  dbConfig:
+    size: small

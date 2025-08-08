@@ -8,6 +8,8 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+// TODO: add some logging to the functions in the KratixSDK implementation; make the log levels configurable
+
 // The SDK interface implements the Kratix SDK core library function
 type SDKInvoker interface {
 	// ReadResourceInput reads the file in /kratix/input/object.yaml and returns a Resource
@@ -69,7 +71,7 @@ func WithOutputDir(p string) Option {
 func New(opts ...Option) *KratixSDK {
 	sdk := &KratixSDK{
 		objectPath:               "/kratix/input/object.yaml",
-		destinationSelectorsPath: "/kratix/input/destination_selectors.yaml",
+		destinationSelectorsPath: "/kratix/metadata/destination_selectors.yaml",
 		outputDir:                "/kratix/output",
 	}
 	for _, opt := range opts {
@@ -80,6 +82,7 @@ func New(opts ...Option) *KratixSDK {
 
 // ReadResourceInput reads the object YAML and returns a Resource.
 func (k *KratixSDK) ReadResourceInput() (ResourceAccessor, error) {
+	// TODO: change the name of the interface to Resource, update the struct to something else
 	data, err := os.ReadFile(k.objectPath)
 	if err != nil {
 		return nil, fmt.Errorf("read object input: %w", err)
@@ -93,10 +96,14 @@ func (k *KratixSDK) ReadResourceInput() (ResourceAccessor, error) {
 
 // ReadPromiseInput reads the object YAML and returns it as a Promise.
 func (k *KratixSDK) ReadPromiseInput() (PromiseAccessor, error) {
+	// TODO: change the name of the interface to Promise, update the struct to something else
 	data, err := os.ReadFile(k.objectPath)
 	if err != nil {
 		return nil, fmt.Errorf("read promise input: %w", err)
 	}
+
+	// TODO: change this to return an unstructured object, similar to the ReadResourceInput function
+	//       make sure to update the PromiseAccessor interface to encapsulate the unstructured object
 	var out map[string]any
 	if err := yaml.Unmarshal(data, &out); err != nil {
 		return nil, fmt.Errorf("unmarshal promise: %w", err)
@@ -131,6 +138,8 @@ func (k *KratixSDK) WriteOutput(relPath string, content []byte) error {
 
 // WriteStatus writes the provided Status to status.yaml.
 func (k *KratixSDK) WriteStatus(s StatusModifier) error {
+	// TODO: do we need to passa StatusModifier or is the Status object enough?
+	// TODO: make sure this merges the existing status from the file with the new status
 	sts, ok := s.(*Status)
 	if !ok {
 		return fmt.Errorf("unsupported status type %T", s)
@@ -139,15 +148,18 @@ func (k *KratixSDK) WriteStatus(s StatusModifier) error {
 	if err != nil {
 		return fmt.Errorf("marshal status: %w", err)
 	}
+	// TODO: fix this; status.yaml should be written to the /kratix/metadata directory
 	return k.WriteOutput("status.yaml", data)
 }
 
 // WriteDestinationSelectors writes the selectors to destination_selectors.yaml.
 func (k *KratixSDK) WriteDestinationSelectors(ds []DestinationSelector) error {
+	// TODO: make sure this merges the existing destination selectors with the new ones
 	data, err := yaml.Marshal(ds)
 	if err != nil {
 		return fmt.Errorf("marshal destination selectors: %w", err)
 	}
+	// TODO: fix this; destination_selectors.yaml should be written to the /kratix/metadata directory
 	return k.WriteOutput("destination_selectors.yaml", data)
 }
 
@@ -173,29 +185,31 @@ func (k *KratixSDK) PipelineName() string {
 
 // PublishStatus merges the provided status into the resource and persists it.
 func (k *KratixSDK) PublishStatus(res ResourceAccessor, s StatusModifier) error {
-	r, ok := res.(*Resource)
-	if !ok {
-		return fmt.Errorf("unsupported resource type %T", res)
-	}
-	newStatus, ok := s.(*Status)
-	if !ok {
-		return fmt.Errorf("unsupported status type %T", s)
-	}
-	existing, ok := r.obj.Object["status"].(map[string]any)
-	if !ok {
-		existing = map[string]any{}
-	}
-	mergeMaps(existing, newStatus.data)
-	r.obj.Object["status"] = existing
-	data, err := yaml.Marshal(existing)
-	if err != nil {
-		return fmt.Errorf("marshal status: %w", err)
-	}
-	return k.WriteOutput("status.yaml", data)
+	panic("not implemented")
+	// r, ok := res.(*Resource)
+	// if !ok {
+	// 	return fmt.Errorf("unsupported resource type %T", res)
+	// }
+	// newStatus, ok := s.(*Status)
+	// if !ok {
+	// 	return fmt.Errorf("unsupported status type %T", s)
+	// }
+	// existing, ok := r.obj.Object["status"].(map[string]any)
+	// if !ok {
+	// 	existing = map[string]any{}
+	// }
+	// mergeMaps(existing, newStatus.data)
+	// r.obj.Object["status"] = existing
+	// data, err := yaml.Marshal(existing)
+	// if err != nil {
+	// 	return fmt.Errorf("marshal status: %w", err)
+	// }
+	// return k.WriteOutput("status.yaml", data)
 }
 
 // ReadStatus reads the status.yaml from the output directory.
 func (k *KratixSDK) ReadStatus() (StatusModifier, error) {
+	// TODO: fix this; status.yaml should be read from the /kratix/metadata directory
 	data, err := os.ReadFile(filepath.Join(k.outputDir, "status.yaml"))
 	if err != nil {
 		return nil, fmt.Errorf("read status: %w", err)

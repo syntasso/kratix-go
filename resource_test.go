@@ -23,7 +23,6 @@ var _ = Describe("Resource", func() {
 			},
 		}
 		resourceObject.SetUnstructuredContent(spec)
-
 		resourceObject.SetName("my-resource")
 		resourceObject.SetNamespace("default")
 		resourceObject.SetGroupVersionKind(schema.GroupVersionKind{
@@ -88,8 +87,10 @@ var _ = Describe("Resource", func() {
 		When("the value exists on the resource", func() {
 			It("returns the value of the provided keys", func() {
 				Expect(resource.GetValue("spec.dbConfig.size")).To(Equal("small"))
+				Expect(resource.GetValue("spec.dbConfig")).To(Equal(map[string]any{
+					"size": "small",
+				}))
 			})
-
 		})
 	})
 })
