@@ -1,6 +1,6 @@
 package kratix
 
 type DestinationSelector struct {
-	Directory   string
-	MatchLabels map[string]string
+	Directory   string            `json:"directory"`
+	MatchLabels map[string]string `json:"matchLabels"`
 }

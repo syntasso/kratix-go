@@ -5,6 +5,8 @@ import (
 	"strings"
 )
 
+// TODO: Do we want a GetConditions() in the Status interface object?
+
 type StatusModifier interface {
 	// Get queries the Status and retrieves the value at the specified path e.g. healthStatus.state
 	Get(string) any
@@ -41,6 +43,9 @@ func (s *Status) Set(path string, val any) error {
 		return errors.New("path cannot be empty")
 	}
 	parts := strings.Split(path, ".")
+	if s.data == nil {
+		s.data = map[string]any{}
+	}
 	m := s.data
 	for i, p := range parts {
 		if i == len(parts)-1 {

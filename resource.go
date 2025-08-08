@@ -8,11 +8,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+// TODO: Do we want a ToUnstructured() in the Resource interface object?
+
 type ResourceAccessor interface {
 	// GetValue queries the resource and returns the value at the specified path e.g. spec.dbConfig.size
 	GetValue(string) (any, error)
 	// GetStatus queries the resource and returns the resource.status
-	GetStatus(string) (StatusModifier, error)
+	GetStatus() (StatusModifier, error)
 	// GetName queries the resource and returns the name
 	GetName() string
 	// GetStatus queries the resource and returns the namespace
@@ -44,13 +46,9 @@ func (r *Resource) GetValue(path string) (any, error) {
 	return val, nil
 }
 
-// GetStatus returns the Status at the provided path.
-func (r *Resource) GetStatus(path string) (StatusModifier, error) {
-	parts := []string{"status"}
-	if path != "" {
-		parts = append(parts, strings.Split(path, ".")...)
-	}
-	val, _, err := unstructured.NestedFieldNoCopy(r.obj.Object, parts...)
+// GetStatus returns the Status of the Object
+func (r *Resource) GetStatus() (StatusModifier, error) {
+	val, _, err := unstructured.NestedFieldNoCopy(r.obj.Object, "status")
 	if err != nil {
 		return nil, err
 	}
