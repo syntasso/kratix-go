@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	kratix "github.com/syntasso/go-sdk"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 var _ = Describe("E2E Tests", func() {
@@ -186,6 +187,29 @@ var _ = Describe("E2E Tests", func() {
 			By("accessing promise properties", func() {
 				Expect(promise.GetName()).To(Equal("my-promise"))
 				Expect(promise.GetNamespace()).To(Equal(""))
+				Expect(promise.GetGroupVersionKind()).To(Equal(schema.GroupVersionKind{
+					Group:   "platform.kratix.io",
+					Version: "v1alpha1",
+					Kind:    "Promise",
+				}))
+				Expect(promise.GetLabels()).To(SatisfyAll(
+					HaveKeyWithValue("kratix.io/promise-version", "v0.1.0"),
+				))
+				Expect(promise.GetAnnotations()).To(SatisfyAll(
+					HaveKeyWithValue("some-annotation", "some-value"),
+				))
+			})
+
+			By("accessing promise status", func() {
+				status, err := promise.GetStatus()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(status.Get("workflowsSucceeded")).To(Equal(int64(1)))
+			})
+
+			By("accessing the promise object", func() {
+				kratixPromise := promise.GetPromise()
+				Expect(kratixPromise.Spec.RequiredPromises).To(HaveLen(1))
+				Expect(kratixPromise.Spec.Workflows.Resource.Configure).To(HaveLen(1))
 			})
 		})
 	})

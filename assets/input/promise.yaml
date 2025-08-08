@@ -63,3 +63,6 @@ spec:
             containers:
               - image: ghcr.io/syntasso/kratix-marketplace/redis-configure-pipeline:v0.1.0
                 name: redis-configure-pipeline
+status:
+  workflowsSucceeded: 1
+  
