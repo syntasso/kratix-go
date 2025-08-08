@@ -4,18 +4,18 @@ import (
 	"github.com/syntasso/kratix/api/v1alpha1"
 )
 
-type PromiseAccessor interface {
-	ResourceAccessor
+type Promise interface {
+	Resource
 	GetPromise() *v1alpha1.Promise
 }
 
-type Promise struct {
-	Resource
+type PromiseImpl struct {
+	ResourceImpl
 	promise *v1alpha1.Promise
 }
 
-var _ PromiseAccessor = (*Promise)(nil)
+var _ Promise = (*PromiseImpl)(nil)
 
-func (p *Promise) GetPromise() *v1alpha1.Promise {
+func (p *PromiseImpl) GetPromise() *v1alpha1.Promise {
 	return p.promise
 }

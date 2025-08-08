@@ -8,8 +8,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-var _ = Describe("Resource", func() {
-	var resource Resource
+var _ = Describe("ResourceImpl", func() {
+	var resource ResourceImpl
 	var labels map[string]string
 	var annotations map[string]string
 
@@ -43,7 +43,7 @@ var _ = Describe("Resource", func() {
 		}
 		resourceObject.SetLabels(labels)
 
-		resource = Resource{
+		resource = ResourceImpl{
 			obj: resourceObject,
 		}
 	})

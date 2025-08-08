@@ -12,9 +12,9 @@ import (
 // The SDK interface implements the Kratix SDK core library function
 type SDKInvoker interface {
 	// ReadResourceInput reads the file in /kratix/input/object.yaml and returns a Resource
-	ReadResourceInput() (ResourceAccessor, error)
+	ReadResourceInput() (Resource, error)
 	// ReadPromiseInput reads the file in /kratix/input/object.yaml and returns a Resource
-	ReadPromiseInput() (PromiseAccessor, error)
+	ReadPromiseInput() (Promise, error)
 	// ReadDestinationSelectors
 	ReadDestinationSelectors() ([]DestinationSelector, error)
 	// ReadStatus reads the /kratix/metadata/status.yaml
@@ -34,7 +34,7 @@ type SDKInvoker interface {
 	// PipelineName returns the value of the KRATIX_PIPELINE_NAME environment variable
 	PipelineName() string
 	// PublishStatus updates the status of the provided resource with the provided status
-	PublishStatus(ResourceAccessor, StatusModifier) error
+	PublishStatus(Resource, StatusModifier) error
 }
 
 // ensure SDKInvoker implemented
@@ -87,13 +87,12 @@ func New(opts ...Option) *KratixSDK {
 }
 
 // ReadResourceInput reads the object YAML and returns a Resource.
-func (k *KratixSDK) ReadResourceInput() (ResourceAccessor, error) {
-	// TODO: change the name of the interface to Resource, update the struct to something else
+func (k *KratixSDK) ReadResourceInput() (Resource, error) {
 	data, err := os.ReadFile(filepath.Join(k.inputDir, k.inputObject))
 	if err != nil {
 		return nil, fmt.Errorf("read object input: %w", err)
 	}
-	r := &Resource{}
+	r := &ResourceImpl{}
 	if err := yaml.Unmarshal(data, &r.obj.Object); err != nil {
 		return nil, fmt.Errorf("unmarshal object: %w", err)
 	}
@@ -101,8 +100,7 @@ func (k *KratixSDK) ReadResourceInput() (ResourceAccessor, error) {
 }
 
 // ReadPromiseInput reads the object YAML and returns it as a Promise.
-func (k *KratixSDK) ReadPromiseInput() (PromiseAccessor, error) {
-	// TODO: change the name of the interface to Promise, update the struct to something else
+func (k *KratixSDK) ReadPromiseInput() (Promise, error) {
 	data, err := os.ReadFile(filepath.Join(k.inputDir, k.inputObject))
 	if err != nil {
 		return nil, fmt.Errorf("read promise input: %w", err)
@@ -115,7 +113,7 @@ func (k *KratixSDK) ReadPromiseInput() (PromiseAccessor, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal promise: %w", err)
 	}
-	return &Promise{Resource: Resource{obj: *obj}, promise: p}, nil
+	return &PromiseImpl{ResourceImpl: ResourceImpl{obj: *obj}, promise: p}, nil
 }
 
 // ReadDestinationSelectors reads destination selectors from file.
@@ -209,7 +207,7 @@ func (k *KratixSDK) PipelineName() string {
 }
 
 // PublishStatus merges the provided status into the resource and persists it.
-func (k *KratixSDK) PublishStatus(res ResourceAccessor, s StatusModifier) error {
+func (k *KratixSDK) PublishStatus(res Resource, s StatusModifier) error {
 	panic("not implemented")
 	// r, ok := res.(*Resource)
 	// if !ok {

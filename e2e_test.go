@@ -174,7 +174,7 @@ var _ = Describe("E2E Tests", func() {
 		})
 
 		It("can read the promise input", func() {
-			var promise kratix.PromiseAccessor
+			var promise kratix.Promise
 
 			By("reading the promise input", func() {
 				var err error
