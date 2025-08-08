@@ -12,18 +12,20 @@ var _ = Describe("E2E Tests", func() {
 	var sdk *kratix.KratixSDK
 	var outputDir string
 
-	BeforeEach(func() {
-		var err error
-		outputDir, err = os.MkdirTemp("", "kratix-e2e-test")
-		Expect(err).ToNot(HaveOccurred())
-
-		sdk = kratix.New(
-			kratix.WithObjectPath("assets/input/resource.yaml"),
-			kratix.WithOutputDir(outputDir),
-		)
-	})
 
 	Describe("An example resource workflow", func() {
+		BeforeEach(func() {
+			var err error
+			outputDir, err = os.MkdirTemp("", "kratix-e2e-test")
+			Expect(err).ToNot(HaveOccurred())
+
+			sdk = kratix.New(
+				kratix.WithObjectPath("assets/input/resource.yaml"),
+				kratix.WithOutputDir(outputDir),
+			)
+		})
+
+
 		It("may use all the functions in the SDK", func() {
 			var resource kratix.ResourceAccessor
 			By("reading the resource input", func() {
@@ -31,6 +33,10 @@ var _ = Describe("E2E Tests", func() {
 				resource, err = sdk.ReadResourceInput()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(resource).ToNot(BeNil())
+
+				promise, err := sdk.ReadPromiseInput()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(promise).ToNot(BeNil())
 			})
 
 			By("accessing resource properties", func() {
@@ -69,6 +75,29 @@ var _ = Describe("E2E Tests", func() {
 				
 				phase := status.Get("phase")
 				Expect(phase).To(Equal("Running"))
+			})
+		})
+	})
+
+	Describe("An example promise workflow", func() {
+		BeforeEach(func() {
+			var err error
+			outputDir, err = os.MkdirTemp("", "kratix-e2e-test")
+			Expect(err).ToNot(HaveOccurred())
+
+			sdk = kratix.New(
+				kratix.WithObjectPath("assets/input/promise.yaml"),
+				kratix.WithOutputDir(outputDir),
+			)
+		})
+
+		It("may use all the functions in the SDK", func() {
+			var promise kratix.PromiseAccessor
+			By("reading the promise input", func() {
+				var err error
+				promise, err = sdk.ReadPromiseInput()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(promise).ToNot(BeNil())
 			})
 		})
 	})
