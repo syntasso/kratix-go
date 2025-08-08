@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: MyResource
+metadata:
+  name: my-resource
+  namespace: my-namespace
+  labels:
+    app: my-app
+    environment: test
+  annotations:
+    description: "Example resource for e2e testing"
+spec:
+  replicas: 3
+  dbConfig:
+    size: large
+    type: postgres
+  features:
+    - logging
+    - monitoring
+  config:
+    timeout: 30s
+    retries: 3
+status:
+  phase: Running
+  conditions:
+    - type: Ready
+      status: "True"
+      lastTransitionTime: "2024-01-01T12:00:00Z"
+  observedGeneration: 1

@@ -18,8 +18,8 @@ var _ = Describe("E2E Tests", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		sdk = kratix.New(
-			kratix.WithObjectPath("assets/input/object.yaml"),
-			kratix.WithOutputDir("assets/output"),
+			kratix.WithObjectPath("assets/input/resource.yaml"),
+			kratix.WithOutputDir(outputDir),
 		)
 	})
 
@@ -33,9 +33,42 @@ var _ = Describe("E2E Tests", func() {
 				Expect(resource).ToNot(BeNil())
 			})
 
-			By("getting the name of the resource", func() {
+			By("accessing resource properties", func() {
 				name := resource.GetName()
 				Expect(name).To(Equal("my-resource"))
+				
+				namespace := resource.GetNamespace()
+				Expect(namespace).To(Equal("my-namespace"))
+				
+				gvk := resource.GetGroupVersionKind()
+				Expect(gvk.Kind).To(Equal("MyResource"))
+				Expect(gvk.Version).To(Equal("v1"))
+				
+				labels := resource.GetLabels()
+				Expect(labels["app"]).To(Equal("my-app"))
+				Expect(labels["environment"]).To(Equal("test"))
+			})
+
+			By("accessing nested spec values", func() {
+				replicas, err := resource.GetValue("spec.replicas")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(replicas).To(BeNumerically("==", 3))
+				
+				dbSize, err := resource.GetValue("spec.dbConfig.size")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(dbSize).To(Equal("large"))
+				
+				dbType, err := resource.GetValue("spec.dbConfig.type")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(dbType).To(Equal("postgres"))
+			})
+
+			By("accessing status information", func() {
+				status, err := resource.GetStatus("")
+				Expect(err).ToNot(HaveOccurred())
+				
+				phase := status.Get("phase")
+				Expect(phase).To(Equal("Running"))
 			})
 		})
 	})
