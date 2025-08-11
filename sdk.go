@@ -18,11 +18,11 @@ type SDKInvoker interface {
 	// ReadDestinationSelectors
 	ReadDestinationSelectors() ([]DestinationSelector, error)
 	// ReadStatus reads the /kratix/metadata/status.yaml
-	ReadStatus() (StatusModifier, error)
+	ReadStatus() (Status, error)
 	// WriteOutput writes the content to the specifies file at the path /kratix/output/filepath
 	WriteOutput(filepath string, content []byte) error
 	// WriteStatus writes the specified status to the /kratix/metadata/status.yaml
-	WriteStatus(status StatusModifier) error
+	WriteStatus(status Status) error
 	// WriteDestinationSelectors writes the specified Destination Selectors to the /kratix/metadata/destination_selectors.yaml
 	WriteDestinationSelectors(selectors []DestinationSelector) error
 	// WorkflowAction returns the value of KRATIX_WORKFLOW_ACTION environment variable
@@ -34,7 +34,7 @@ type SDKInvoker interface {
 	// PipelineName returns the value of the KRATIX_PIPELINE_NAME environment variable
 	PipelineName() string
 	// PublishStatus updates the status of the provided resource with the provided status
-	PublishStatus(resource Resource, status StatusModifier) error
+	PublishStatus(resource Resource, status Status) error
 }
 
 // ensure SDKInvoker implemented
@@ -86,7 +86,7 @@ func New(opts ...Option) *KratixSDK {
 	return sdk
 }
 
-// ReadResourceInput reads the object YAML and returns a Resource.
+// ReadResourceInput reads the Input Object YAML and returns a Resource.
 func (k *KratixSDK) ReadResourceInput() (Resource, error) {
 	data, err := os.ReadFile(filepath.Join(k.inputDir, k.inputObject))
 	if err != nil {
@@ -99,7 +99,7 @@ func (k *KratixSDK) ReadResourceInput() (Resource, error) {
 	return r, nil
 }
 
-// ReadPromiseInput reads the object YAML and returns it as a Promise.
+// ReadPromiseInput reads the Input Promise YAML and returns it as a Promise.
 func (k *KratixSDK) ReadPromiseInput() (Promise, error) {
 	data, err := os.ReadFile(filepath.Join(k.inputDir, k.inputObject))
 	if err != nil {
@@ -130,7 +130,7 @@ func (k *KratixSDK) ReadDestinationSelectors() ([]DestinationSelector, error) {
 }
 
 // ReadStatus reads the status.yaml from the output directory.
-func (k *KratixSDK) ReadStatus() (StatusModifier, error) {
+func (k *KratixSDK) ReadStatus() (Status, error) {
 	// TODO: fix this; status.yaml should be read from the /kratix/metadata directory
 	data, err := os.ReadFile(filepath.Join(k.metadataDir, "status.yaml"))
 	if err != nil {
@@ -140,7 +140,7 @@ func (k *KratixSDK) ReadStatus() (StatusModifier, error) {
 	if err := yaml.Unmarshal(data, &m); err != nil {
 		return nil, fmt.Errorf("unmarshal status: %w", err)
 	}
-	return &Status{data: m}, nil
+	return &StatusImpl{data: m}, nil
 }
 
 func (k *KratixSDK) write(dir, relPath string, content []byte) error {
@@ -160,10 +160,10 @@ func (k *KratixSDK) WriteOutput(relPath string, content []byte) error {
 }
 
 // WriteStatus writes the provided Status to status.yaml.
-func (k *KratixSDK) WriteStatus(s StatusModifier) error {
+func (k *KratixSDK) WriteStatus(s Status) error {
 	// TODO: do we need to passa StatusModifier or is the Status object enough?
 	// TODO: make sure this merges the existing status from the file with the new status
-	sts, ok := s.(*Status)
+	sts, ok := s.(*StatusImpl)
 	if !ok {
 		return fmt.Errorf("unsupported status type %T", s)
 	}
@@ -207,7 +207,7 @@ func (k *KratixSDK) PipelineName() string {
 }
 
 // PublishStatus merges the provided status into the resource and persists it.
-func (k *KratixSDK) PublishStatus(res Resource, s StatusModifier) error {
+func (k *KratixSDK) PublishStatus(res Resource, s Status) error {
 	panic("not implemented")
 	// r, ok := res.(*Resource)
 	// if !ok {

@@ -9,9 +9,7 @@ import (
 	"github.com/itchyny/gojq"
 )
 
-// TODO: Do we want a GetConditions() in the Status interface object?
-
-type StatusModifier interface {
+type Status interface {
 	// Get queries the Status and retrieves the value at the specified path e.g. healthStatus.state
 	Get(string) any
 	// Set updates the value at the specified path e.g. healthStatus.state
@@ -20,12 +18,20 @@ type StatusModifier interface {
 	Remove(string) error
 }
 
-// Status implements StatusModifier using a generic map.
-type Status struct {
+type operation string
+
+const (
+	opGet    operation = "get"
+	opSet    operation = "set"
+	opRemove operation = "remove"
+)
+
+// StatusImpl implements Status using a generic map.
+type StatusImpl struct {
 	data map[string]any
 }
 
-var _ StatusModifier = (*Status)(nil)
+var _ Status = (*StatusImpl)(nil)
 
 // Get retrieves the value at the provided path.
 // It can be used to execute a jq-like query on the Status data and returns the results
@@ -34,8 +40,8 @@ var _ StatusModifier = (*Status)(nil)
 //   - ".pods[] | select(.status == \"Running\")" -> returns all running pods
 //   - ".pods[].containers[] | select(.ready == true)" -> returns all ready containers
 //   - ".pods | length" -> returns the number of pods
-func (s *Status) Get(path string) any {
-	results, err := s.query("get", path, nil)
+func (s *StatusImpl) Get(path string) any {
+	results, err := s.query(opGet, path, nil)
 	if err != nil || len(results) == 0 {
 		return nil
 	}
@@ -44,15 +50,15 @@ func (s *Status) Get(path string) any {
 
 // Set updates the value at the provided path.
 // It accepts jq-like paths, like ".pods[].name" or ".pods[] | select(.status == \"Running\")"
-func (s *Status) Set(path string, val any) error {
-	_, err := s.query("set", path, val)
+func (s *StatusImpl) Set(path string, val any) error {
+	_, err := s.query(opSet, path, val)
 	return err
 }
 
 // Remove deletes the value at the provided path.
 // It accepts jq-like paths, like ".pods[].name" or ".pods[] | select(.status == \"Running\")"
-func (s *Status) Remove(path string) error {
-	_, err := s.query("remove", path, nil)
+func (s *StatusImpl) Remove(path string) error {
+	_, err := s.query(opRemove, path, nil)
 	return err
 }
 
@@ -68,20 +74,20 @@ func normalisePath(path string) (string, error) {
 	return path, nil
 }
 
-func buildQuery(op, path string, val any) (string, bool, error) {
+func buildQuery(op operation, path string, val any) (string, bool, error) {
 	var query string
 	persist := true
 	switch op {
-	case "get":
+	case opGet:
 		query = fmt.Sprintf(`%s`, path)
 		persist = false
-	case "set":
+	case opSet:
 		jsonObj, err := json.Marshal(val)
 		if err != nil {
 			return "", false, err
 		}
 		query = fmt.Sprintf(`%s = %s`, path, string(jsonObj))
-	case "remove":
+	case opRemove:
 		query = fmt.Sprintf(`del(%s)`, path)
 	default:
 		return "", false, fmt.Errorf("invalid operation: %s", op)
@@ -90,7 +96,7 @@ func buildQuery(op, path string, val any) (string, bool, error) {
 	return query, persist, nil
 }
 
-func (s *Status) query(op, path string, val any) ([]any, error) {
+func (s *StatusImpl) query(op operation, path string, val any) ([]any, error) {
 	var err error
 	if path, err = normalisePath(path); err != nil {
 		return nil, err

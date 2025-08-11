@@ -14,7 +14,7 @@ type Resource interface {
 	// GetValue queries the resource and returns the value at the specified path e.g. spec.dbConfig.size
 	GetValue(string) (any, error)
 	// GetStatus queries the resource and returns the resource.status
-	GetStatus() (StatusModifier, error)
+	GetStatus() (Status, error)
 	// GetName queries the resource and returns the name
 	GetName() string
 	// GetStatus queries the resource and returns the namespace
@@ -25,6 +25,8 @@ type Resource interface {
 	GetLabels() map[string]string
 	// GetAnnotations queries the resource and returns the annotations
 	GetAnnotations() map[string]string
+	// GetUnstructured returns the underlying unstructured object
+	GetUnstructured() unstructured.Unstructured
 }
 
 // ResourceImpl implements contract.Resource backed by an unstructured object.
@@ -47,7 +49,7 @@ func (r *ResourceImpl) GetValue(path string) (any, error) {
 }
 
 // GetStatus returns the Status of the Object
-func (r *ResourceImpl) GetStatus() (StatusModifier, error) {
+func (r *ResourceImpl) GetStatus() (Status, error) {
 	val, _, err := unstructured.NestedFieldNoCopy(r.obj.Object, "status")
 	if err != nil {
 		return nil, err
@@ -56,7 +58,7 @@ func (r *ResourceImpl) GetStatus() (StatusModifier, error) {
 	if !ok {
 		m = map[string]any{}
 	}
-	return &Status{data: m}, nil
+	return &StatusImpl{data: m}, nil
 }
 
 // GetName returns the resource name.
@@ -73,3 +75,6 @@ func (r *ResourceImpl) GetLabels() map[string]string { return r.obj.GetLabels() 
 
 // GetAnnotations returns the annotations of the resource.
 func (r *ResourceImpl) GetAnnotations() map[string]string { return r.obj.GetAnnotations() }
+
+// GetUnstructured returns the underlying unstructured object for the resource.
+func (r *ResourceImpl) GetUnstructured() unstructured.Unstructured { return r.obj }

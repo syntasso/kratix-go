@@ -6,10 +6,10 @@ import (
 )
 
 var _ = Describe("Status", func() {
-	var status *Status
+	var status *StatusImpl
 
 	BeforeEach(func() {
-		status = &Status{
+		status = &StatusImpl{
 			data: map[string]any{
 				"phase": "Ready",
 				"conditions": map[string]any{
@@ -204,7 +204,7 @@ var _ = Describe("Status", func() {
 		})
 
 		It("initializes data map if nil", func() {
-			emptyStatus := &Status{}
+			emptyStatus := &StatusImpl{}
 			err := emptyStatus.Set("test", "value")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(emptyStatus.Get("test")).To(Equal("value"))

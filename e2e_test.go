@@ -152,7 +152,7 @@ var _ = Describe("E2E Tests", func() {
 				})
 
 				By("writing to the status yaml", func() {
-					status := &kratix.Status{}
+					status := &kratix.StatusImpl{}
 					status.Set("nested.field", "nested-value")
 					status.Set("message", "status from metadata")
 
@@ -215,7 +215,6 @@ var _ = Describe("E2E Tests", func() {
 	})
 })
 
-// readFileContent is a helper function to read file content and verify no error occurred
 func readFileContent(baseDir, relativePath string) []byte {
 	GinkgoHelper()
 	fullpath := filepath.Join(baseDir, relativePath)
