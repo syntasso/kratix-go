@@ -45,10 +45,7 @@ jobs:
         fi
         
     - name: Run unit tests with Ginkgo
-      run: ginkgo -v --race --cover --coverprofile=coverage.out ./...
-      
-    - name: Generate coverage report
-      run: go tool cover -html=coverage.out -o coverage.html
+      run: make test-coverage
       
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
@@ -101,12 +98,15 @@ jobs:
         
     - name: Install Docker Buildx
       uses: docker/setup-buildx-action@v3
-      
+
     - name: Run Kratix Quick Start
       run: |
         git clone https://github.com/syntasso/kratix.git project-kratix
         cd project-kratix
         make quick-start
+
+    - name: Download dependencies
+      run: go mod download
         
     - name: Run E2E Tests
       run: |

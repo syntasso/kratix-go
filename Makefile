@@ -31,11 +31,11 @@ build: ## Build the Go package
 
 .PHONY: test
 test: ## Run unit tests
-	go test -v ./...
+	go run github.com/onsi/ginkgo/v2/ginkgo -r --skip-package system ./...
 
 .PHONY: test-coverage
 test-coverage: ## Run tests with coverage
-	go test -v -coverprofile=coverage.out ./...
+	go run github.com/onsi/ginkgo/v2/ginkgo -r --skip-package system -cover -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
 
 .PHONY: e2e-test
