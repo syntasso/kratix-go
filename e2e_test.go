@@ -203,7 +203,7 @@ var _ = Describe("E2E Tests", func() {
 			By("accessing promise status", func() {
 				status, err := promise.GetStatus()
 				Expect(err).ToNot(HaveOccurred())
-				Expect(status.Get("workflowsSucceeded")).To(Equal(int64(1)))
+				Expect(status.Get("workflowsSucceeded")).To(Equal(1))
 			})
 
 			By("accessing the promise object", func() {

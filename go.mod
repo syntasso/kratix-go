@@ -3,6 +3,7 @@ module github.com/syntasso/kratix-go
 go 1.24.5
 
 require (
+	github.com/itchyny/gojq v0.12.17
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.38.0
 	github.com/syntasso/kratix v0.125.1-0.20250807132634-605d221cdabc
@@ -26,6 +27,7 @@ require (
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/pprof v0.0.0-20250403155104-27863c87afa6 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/itchyny/timefmt-go v0.1.6 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect

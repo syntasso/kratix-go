@@ -20,11 +20,11 @@ type SDKInvoker interface {
 	// ReadStatus reads the /kratix/metadata/status.yaml
 	ReadStatus() (StatusModifier, error)
 	// WriteOutput writes the content to the specifies file at the path /kratix/output/filepath
-	WriteOutput(string, []byte) error
-	// WriteStatus writes the specified status to the /kratix/output/status.yaml
-	WriteStatus(StatusModifier) error
-	// WriteDestinationSelectors writes the specified Destination Selectors to the /kratix/output/destination_selectors.yaml
-	WriteDestinationSelectors([]DestinationSelector) error
+	WriteOutput(filepath string, content []byte) error
+	// WriteStatus writes the specified status to the /kratix/metadata/status.yaml
+	WriteStatus(status StatusModifier) error
+	// WriteDestinationSelectors writes the specified Destination Selectors to the /kratix/metadata/destination_selectors.yaml
+	WriteDestinationSelectors(selectors []DestinationSelector) error
 	// WorkflowAction returns the value of KRATIX_WORKFLOW_ACTION environment variable
 	WorkflowAction() string
 	// WorkflowType returns the value of KRATIX_WORKFLOW_TYPE environment variable
@@ -34,7 +34,7 @@ type SDKInvoker interface {
 	// PipelineName returns the value of the KRATIX_PIPELINE_NAME environment variable
 	PipelineName() string
 	// PublishStatus updates the status of the provided resource with the provided status
-	PublishStatus(Resource, StatusModifier) error
+	PublishStatus(resource Resource, status StatusModifier) error
 }
 
 // ensure SDKInvoker implemented
@@ -228,17 +228,4 @@ func (k *KratixSDK) PublishStatus(res Resource, s StatusModifier) error {
 	// 	return fmt.Errorf("marshal status: %w", err)
 	// }
 	// return k.WriteOutput("status.yaml", data)
-}
-
-// mergeMaps recursively merges src into dst.
-func mergeMaps(dst, src map[string]any) {
-	for k, v := range src {
-		if mv, ok := v.(map[string]any); ok {
-			if existing, ok := dst[k].(map[string]any); ok {
-				mergeMaps(existing, mv)
-				continue
-			}
-		}
-		dst[k] = v
-	}
 }
