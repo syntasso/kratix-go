@@ -94,9 +94,9 @@ var _ = Describe("ResourceImpl", func() {
 		})
 	})
 
-	Describe("GetUnstructured", func() {
+	Describe("ToUnstructured", func() {
 		It("returns the underlying unstructured object", func() {
-			Expect(resource.GetUnstructured()).To(Equal(resource.obj))
+			Expect(resource.ToUnstructured()).To(Equal(resource.obj))
 		})
 	})
 })

@@ -16,6 +16,8 @@ type Status interface {
 	Set(string, any) error
 	// Set removes the value at the specified path e.g. healthStatus.state
 	Remove(string) error
+	// ToMap returns the Status as a map[string]any
+	ToMap() map[string]any
 }
 
 type operation string
@@ -32,6 +34,11 @@ type StatusImpl struct {
 }
 
 var _ Status = (*StatusImpl)(nil)
+
+// ToMap returns the Status as a map[string]any
+func (s *StatusImpl) ToMap() map[string]any {
+	return s.data
+}
 
 // Get retrieves the value at the provided path.
 // It can be used to execute a jq-like query on the Status data and returns the results

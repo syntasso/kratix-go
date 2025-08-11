@@ -26,7 +26,7 @@ type Resource interface {
 	// GetAnnotations queries the resource and returns the annotations
 	GetAnnotations() map[string]string
 	// GetUnstructured returns the underlying unstructured object
-	GetUnstructured() unstructured.Unstructured
+	ToUnstructured() unstructured.Unstructured
 }
 
 // ResourceImpl implements contract.Resource backed by an unstructured object.
@@ -77,4 +77,4 @@ func (r *ResourceImpl) GetLabels() map[string]string { return r.obj.GetLabels() 
 func (r *ResourceImpl) GetAnnotations() map[string]string { return r.obj.GetAnnotations() }
 
 // GetUnstructured returns the underlying unstructured object for the resource.
-func (r *ResourceImpl) GetUnstructured() unstructured.Unstructured { return r.obj }
+func (r *ResourceImpl) ToUnstructured() unstructured.Unstructured { return r.obj }

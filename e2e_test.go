@@ -7,14 +7,16 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	kratix "github.com/syntasso/go-sdk"
+	kratixgofakes "github.com/syntasso/go-sdk/kratix-gofakes"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 var _ = Describe("E2E Tests", func() {
 	var (
-		sdk         *kratix.KratixSDK
-		outputDir   string
-		metadataDir string
+		sdk              *kratix.KratixSDK
+		outputDir        string
+		metadataDir      string
+		mockObjectClient *kratixgofakes.FakeUpdateStatusInterface
 	)
 
 	BeforeEach(func() {
@@ -25,11 +27,14 @@ var _ = Describe("E2E Tests", func() {
 		metadataDir, err = os.MkdirTemp("", "kratix-e2e-test")
 		Expect(err).ToNot(HaveOccurred())
 
+		mockObjectClient = &kratixgofakes.FakeUpdateStatusInterface{}
+
 		sdk = kratix.New(
 			kratix.WithInputDir("assets/input"),
 			kratix.WithInputObject("resource.yaml"),
 			kratix.WithOutputDir(outputDir),
 			kratix.WithMetadataDir(metadataDir),
+			kratix.WithObjectClient(mockObjectClient),
 		)
 
 		copyAssetsToMetadata(metadataDir)
@@ -160,6 +165,32 @@ var _ = Describe("E2E Tests", func() {
 					content := readFileContent(metadataDir, "status.yaml")
 					Expect(content).To(MatchYAML(`{nested: {field: nested-value}, message: "status from metadata"}`))
 				})
+			})
+
+			By("publishing status", func() {
+				resource, err := sdk.ReadResourceInput()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(resource).ToNot(BeNil())
+
+				status := &kratix.StatusImpl{}
+				status.Set("nested.field", "nested-value")
+				status.Set("message", "hello from publish")
+
+				Expect(sdk.PublishStatus(resource, status)).To(Succeed())
+
+				Expect(mockObjectClient.UpdateStatusCallCount()).To(Equal(1))
+				_, updatedResource, _ := mockObjectClient.UpdateStatusArgsForCall(0)
+
+				resourceStatus, err := resource.GetStatus()
+				Expect(err).ToNot(HaveOccurred())
+
+				expectedStatus := resourceStatus.ToMap()
+				expectedStatus["nested"] = map[string]any{
+					"field": "nested-value",
+				}
+				expectedStatus["message"] = "hello from publish"
+
+				Expect(updatedResource.Object["status"]).To(Equal(expectedStatus))
 			})
 		})
 	})

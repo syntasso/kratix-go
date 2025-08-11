@@ -1,11 +1,19 @@
 package kratix
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/syntasso/kratix/api/v1alpha1"
+	"github.com/syntasso/kratix/work-creator/lib/helpers"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	kratixlib "github.com/syntasso/kratix/work-creator/lib"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	"sigs.k8s.io/yaml"
 )
 
@@ -47,7 +55,13 @@ type KratixSDK struct {
 	inputDir    string
 	metadataDir string
 
-	inputObject string
+	inputObject  string
+	objectClient UpdateStatusInterface
+}
+
+//go:generate go tool counterfeiter . UpdateStatusInterface
+type UpdateStatusInterface interface {
+	UpdateStatus(ctx context.Context, obj *unstructured.Unstructured, opts metav1.UpdateOptions) (*unstructured.Unstructured, error)
 }
 
 // Option configures KratixSDK.
@@ -70,6 +84,11 @@ func WithMetadataDir(p string) Option {
 // WithOutputDir overrides the output directory path.
 func WithOutputDir(p string) Option {
 	return func(k *KratixSDK) { k.outputDir = p }
+}
+
+// WithObjectClient overrides the Kubernetes client for testing
+func WithObjectClient(client UpdateStatusInterface) Option {
+	return func(k *KratixSDK) { k.objectClient = client }
 }
 
 // New creates a KratixSDK with optional configuration overrides.
@@ -206,26 +225,43 @@ func (k *KratixSDK) PipelineName() string {
 	return os.Getenv("KRATIX_PIPELINE_NAME")
 }
 
-// PublishStatus merges the provided status into the resource and persists it.
-func (k *KratixSDK) PublishStatus(res Resource, s Status) error {
-	panic("not implemented")
-	// r, ok := res.(*Resource)
-	// if !ok {
-	// 	return fmt.Errorf("unsupported resource type %T", res)
-	// }
-	// newStatus, ok := s.(*Status)
-	// if !ok {
-	// 	return fmt.Errorf("unsupported status type %T", s)
-	// }
-	// existing, ok := r.obj.Object["status"].(map[string]any)
-	// if !ok {
-	// 	existing = map[string]any{}
-	// }
-	// mergeMaps(existing, newStatus.data)
-	// r.obj.Object["status"] = existing
-	// data, err := yaml.Marshal(existing)
-	// if err != nil {
-	// 	return fmt.Errorf("marshal status: %w", err)
-	// }
-	// return k.WriteOutput("status.yaml", data)
+func (k *KratixSDK) getObjectClient(res Resource) (UpdateStatusInterface, error) {
+	if k.objectClient != nil {
+		return k.objectClient, nil
+	}
+
+	gvr := schema.GroupVersionResource{
+		Group:    res.GetGroupVersionKind().Group,
+		Version:  res.GetGroupVersionKind().Version,
+		Resource: os.Getenv("CRD_PLURAL"),
+	}
+	client, err := helpers.GetK8sClient()
+	if err != nil {
+		return nil, err
+	}
+	return client.Resource(gvr).Namespace(res.GetNamespace()), nil
+}
+
+// PublishStatus takes a Resource and a Status, and then implements the logic to
+// merge the status into the resource and persist it via the Kubernetes API.
+func (k *KratixSDK) PublishStatus(res Resource, incomingStatus Status) error {
+	objectClient, err := k.getObjectClient(res)
+	if err != nil {
+		return err
+	}
+
+	existingStatus, err := res.GetStatus()
+	if err != nil {
+		return err
+	}
+
+	newStatus := kratixlib.MergeStatuses(existingStatus.ToMap(), incomingStatus.ToMap())
+	uRes := res.ToUnstructured()
+	uRes.Object["status"] = newStatus
+
+	if _, err = objectClient.UpdateStatus(context.Background(), &uRes, metav1.UpdateOptions{}); err != nil {
+		return fmt.Errorf("failed to update status: %w", err)
+	}
+
+	return nil
 }
