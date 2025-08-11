@@ -1,4 +1,4 @@
-module github.com/syntasso/go-sdk
+module github.com/syntasso/kratix-go
 
 go 1.24.5
 
