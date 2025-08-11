@@ -40,7 +40,7 @@ test-coverage: ## Run tests with coverage
 
 .PHONY: e2e-test
 e2e-test: build-and-load-image ## Run end-to-end tests using Ginkgo
-	ginkgo -v -r system
+	go run github.com/onsi/ginkgo/v2/ginkgo -v -r system
 
 .PHONY: ginkgo-test
 ginkgo-test: ## Run all tests using Ginkgo
