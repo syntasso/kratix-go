@@ -39,8 +39,8 @@ test-coverage: ## Run tests with coverage
 	go tool cover -html=coverage.out -o coverage.html
 
 .PHONY: e2e-test
-e2e-test: ## Run end-to-end tests using Ginkgo
-	ginkgo -v --focus="E2E Tests"
+e2e-test: build-and-load-image ## Run end-to-end tests using Ginkgo
+	ginkgo -v -r system
 
 .PHONY: ginkgo-test
 ginkgo-test: ## Run all tests using Ginkgo
@@ -72,6 +72,6 @@ upgrade: ## Upgrade all dependencies
 	go get -u ./...
 	go mod tidy
 
-build-and-load-promise:
+build-and-load-image:
 	docker build -t ghcr.io/syntasso/kratix-go/sdk-test:v1.0.0 -f system/assets/workflows/Dockerfile .
 	kind load docker-image ghcr.io/syntasso/kratix-go/sdk-test:v1.0.0 --name platform

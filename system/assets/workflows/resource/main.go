@@ -33,6 +33,10 @@ func main() {
 
 	log.Println("Creating configmap...")
 	cm := &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ConfigMap",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      resource.GetName() + "-config",
 			Namespace: resource.GetNamespace(),
@@ -46,9 +50,9 @@ func main() {
 		cm.Data[fieldMap["name"].(string)] = fieldMap["value"].(string)
 	}
 	cm.Data["workflowAction"] = sdk.WorkflowAction()
-	cm.Data["workflow-type"] = sdk.WorkflowType()
-	cm.Data["promise-name"] = sdk.PromiseName()
-	cm.Data["pipeline-name"] = sdk.PipelineName()
+	cm.Data["workflowType"] = sdk.WorkflowType()
+	cm.Data["promiseName"] = sdk.PromiseName()
+	cm.Data["pipelineName"] = sdk.PipelineName()
 
 	cmContent, err := yaml.Marshal(cm)
 	if err != nil {
