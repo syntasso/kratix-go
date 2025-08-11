@@ -6,8 +6,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	kratix "github.com/syntasso/go-sdk"
-	kratixgofakes "github.com/syntasso/go-sdk/kratix-gofakes"
+	"github.com/syntasso/kratix-go"
+	kratixgofakes "github.com/syntasso/kratix-go/kratix-gofakes"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
