@@ -115,7 +115,6 @@ func (s *StatusImpl) query(op operation, path string, val any) ([]any, error) {
 	}
 
 	jqQuery, err := gojq.Parse(query)
-
 	if err != nil {
 		return nil, err
 	}

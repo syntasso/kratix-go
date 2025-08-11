@@ -233,7 +233,7 @@ func (k *KratixSDK) getObjectClient(res Resource) (UpdateStatusInterface, error)
 	gvr := schema.GroupVersionResource{
 		Group:    res.GetGroupVersionKind().Group,
 		Version:  res.GetGroupVersionKind().Version,
-		Resource: os.Getenv("CRD_PLURAL"),
+		Resource: os.Getenv("KRATIX_CRD_PLURAL"),
 	}
 	client, err := helpers.GetK8sClient()
 	if err != nil {

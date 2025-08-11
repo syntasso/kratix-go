@@ -71,3 +71,7 @@ deps: ## Download and verify dependencies
 upgrade: ## Upgrade all dependencies
 	go get -u ./...
 	go mod tidy
+
+build-and-load-promise:
+	docker build -t ghcr.io/syntasso/kratix-go/sdk-test:v1.0.0 -f system/assets/workflows/Dockerfile .
+	kind load docker-image ghcr.io/syntasso/kratix-go/sdk-test:v1.0.0 --name platform
