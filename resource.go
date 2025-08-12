@@ -8,11 +8,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-type ResourceAccessor interface {
+// TODO: Do we want a ToUnstructured() in the Resource interface object?
+
+type Resource interface {
 	// GetValue queries the resource and returns the value at the specified path e.g. spec.dbConfig.size
 	GetValue(string) (any, error)
 	// GetStatus queries the resource and returns the resource.status
-	GetStatus(string) (StatusModifier, error)
+	GetStatus() (Status, error)
 	// GetName queries the resource and returns the name
 	GetName() string
 	// GetStatus queries the resource and returns the namespace
@@ -23,17 +25,20 @@ type ResourceAccessor interface {
 	GetLabels() map[string]string
 	// GetAnnotations queries the resource and returns the annotations
 	GetAnnotations() map[string]string
+	// GetUnstructured returns the underlying unstructured object
+	ToUnstructured() unstructured.Unstructured
 }
 
-// Resource implements contract.Resource backed by an unstructured object.
-type Resource struct {
+// ResourceImpl implements contract.Resource backed by an unstructured object.
+type ResourceImpl struct {
 	obj unstructured.Unstructured
 }
 
-var _ ResourceAccessor = (*Resource)(nil)
+var _ Resource = (*ResourceImpl)(nil)
 
 // GetValue returns the value at the provided path.
-func (r *Resource) GetValue(path string) (any, error) {
+func (r *ResourceImpl) GetValue(path string) (any, error) {
+	path = strings.TrimPrefix(path, ".")
 	val, found, err := unstructured.NestedFieldNoCopy(r.obj.Object, strings.Split(path, ".")...)
 	if err != nil {
 		return nil, err
@@ -44,13 +49,9 @@ func (r *Resource) GetValue(path string) (any, error) {
 	return val, nil
 }
 
-// GetStatus returns the Status at the provided path.
-func (r *Resource) GetStatus(path string) (StatusModifier, error) {
-	parts := []string{"status"}
-	if path != "" {
-		parts = append(parts, strings.Split(path, ".")...)
-	}
-	val, _, err := unstructured.NestedFieldNoCopy(r.obj.Object, parts...)
+// GetStatus returns the Status of the Object
+func (r *ResourceImpl) GetStatus() (Status, error) {
+	val, _, err := unstructured.NestedFieldNoCopy(r.obj.Object, "status")
 	if err != nil {
 		return nil, err
 	}
@@ -58,20 +59,23 @@ func (r *Resource) GetStatus(path string) (StatusModifier, error) {
 	if !ok {
 		m = map[string]any{}
 	}
-	return &Status{data: m}, nil
+	return &StatusImpl{data: m}, nil
 }
 
 // GetName returns the resource name.
-func (r *Resource) GetName() string { return r.obj.GetName() }
+func (r *ResourceImpl) GetName() string { return r.obj.GetName() }
 
 // GetNamespace returns the resource namespace.
-func (r *Resource) GetNamespace() string { return r.obj.GetNamespace() }
+func (r *ResourceImpl) GetNamespace() string { return r.obj.GetNamespace() }
 
 // GetGroupVersionKind returns the GVK of the resource.
-func (r *Resource) GetGroupVersionKind() schema.GroupVersionKind { return r.obj.GroupVersionKind() }
+func (r *ResourceImpl) GetGroupVersionKind() schema.GroupVersionKind { return r.obj.GroupVersionKind() }
 
 // GetLabels returns the labels of the resource.
-func (r *Resource) GetLabels() map[string]string { return r.obj.GetLabels() }
+func (r *ResourceImpl) GetLabels() map[string]string { return r.obj.GetLabels() }
 
 // GetAnnotations returns the annotations of the resource.
-func (r *Resource) GetAnnotations() map[string]string { return r.obj.GetAnnotations() }
+func (r *ResourceImpl) GetAnnotations() map[string]string { return r.obj.GetAnnotations() }
+
+// GetUnstructured returns the underlying unstructured object for the resource.
+func (r *ResourceImpl) ToUnstructured() unstructured.Unstructured { return r.obj }

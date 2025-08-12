@@ -1,0 +1,145 @@
+name: Unit Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  test:
+    name: Run Ginkgo Unit Tests
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        go-version: [1.24.5]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go ${{ matrix.go-version }}
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ matrix.go-version }}
+        cache: true
+        
+    - name: Install Ginkgo CLI
+      run: go install github.com/onsi/ginkgo/v2/ginkgo@latest
+      
+    - name: Download dependencies
+      run: go mod download
+      
+    - name: Verify dependencies
+      run: go mod verify
+      
+    - name: Run go fmt check
+      run: |
+        if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+          echo "Code is not formatted. Please run 'go fmt ./...'"
+          gofmt -s -l .
+          exit 1
+        fi
+        
+    - name: Run unit tests with Ginkgo
+      run: make test-coverage
+      
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.out
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+        
+    - name: Upload coverage artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: |
+          coverage.out
+          coverage.html
+        retention-days: 30
+        
+    - name: Test summary
+      run: |
+        echo "✅ Unit tests completed successfully!"
+        echo "📊 Coverage report generated"
+        echo "🔍 Code quality checks passed"
+
+  system-test:
+    name: Run System Tests
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 1.24.5
+        cache: true
+        
+    - name: Install Kind
+      uses: helm/kind-action@v1
+      with:
+        install_only: true
+        version: v0.29.0
+        
+    - name: Setup Flux CLI
+      uses: fluxcd/flux2/action@main
+      with:
+        version: '2.4.0'
+        
+    - name: Install Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Run Kratix Quick Start
+      run: |
+        git clone https://github.com/syntasso/kratix.git project-kratix
+        cd project-kratix
+        make quick-start
+
+    - name: Download dependencies
+      run: go mod download
+        
+    - name: Run E2E Tests
+      run: |
+        make e2e-test
+        
+    - name: System Test Summary
+      run: |
+        echo "✅ System tests completed successfully!"
+        echo "🚀 Kratix quick-start verified"
+        echo "🧪 E2E tests passed"
+
+  release-please:
+    name: Create Release PR
+    runs-on: ubuntu-latest
+    needs: [test, system-test]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install Release Please
+      run: npm install -g release-please
+      
+    - name: Create Release PR
+      run: |
+        release-please release-pr \
+          --repo-url="${{ github.repository }}" \
+          --package-name="kratix-go" \
+          --token="${{ secrets.GITHUB_TOKEN }}" \
+          --release-type="go"

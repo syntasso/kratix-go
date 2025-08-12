@@ -1,79 +1,154 @@
 package kratix
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
+
+	"github.com/itchyny/gojq"
 )
 
-type StatusModifier interface {
+type Status interface {
 	// Get queries the Status and retrieves the value at the specified path e.g. healthStatus.state
 	Get(string) any
 	// Set updates the value at the specified path e.g. healthStatus.state
 	Set(string, any) error
 	// Set removes the value at the specified path e.g. healthStatus.state
-	Remove(string) bool
+	Remove(string) error
+	// ToMap returns the Status as a map[string]any
+	ToMap() map[string]any
 }
 
-// Status implements StatusModifier using a generic map.
-type Status struct {
+type operation string
+
+const (
+	opGet    operation = "get"
+	opSet    operation = "set"
+	opRemove operation = "remove"
+)
+
+// StatusImpl implements Status using a generic map.
+type StatusImpl struct {
 	data map[string]any
 }
 
-var _ StatusModifier = (*Status)(nil)
+var _ Status = (*StatusImpl)(nil)
+
+// ToMap returns the Status as a map[string]any
+func (s *StatusImpl) ToMap() map[string]any {
+	return s.data
+}
+
+// NewStatus creates a new Status with an empty map.
+func NewStatus() Status {
+	return &StatusImpl{
+		data: make(map[string]any),
+	}
+}
+
+// NewStatusFromMap creates a new Status and initialises it with the provided map.
+func NewStatusFromMap(data map[string]any) Status {
+	return &StatusImpl{
+		data: data,
+	}
+}
 
 // Get retrieves the value at the provided path.
-func (s *Status) Get(path string) any {
-	parts := strings.Split(path, ".")
-	var current any = s.data
-	for _, p := range parts {
-		m, ok := current.(map[string]any)
-		if !ok {
-			return nil
-		}
-		current = m[p]
+// It can be used to execute a jq-like query on the Status data and returns the results
+// Examples:
+//   - ".pods[].name" -> returns all pod names
+//   - ".pods[] | select(.status == \"Running\")" -> returns all running pods
+//   - ".pods[].containers[] | select(.ready == true)" -> returns all ready containers
+//   - ".pods | length" -> returns the number of pods
+func (s *StatusImpl) Get(path string) any {
+	results, err := s.query(opGet, path, nil)
+	if err != nil || len(results) == 0 {
+		return nil
 	}
-	return current
+	return results[0]
 }
 
 // Set updates the value at the provided path.
-func (s *Status) Set(path string, val any) error {
-	if path == "" {
-		return errors.New("path cannot be empty")
-	}
-	parts := strings.Split(path, ".")
-	m := s.data
-	for i, p := range parts {
-		if i == len(parts)-1 {
-			m[p] = val
-			return nil
-		}
-		next, ok := m[p].(map[string]any)
-		if !ok {
-			next = map[string]any{}
-			m[p] = next
-		}
-		m = next
-	}
-	return nil
+// It accepts jq-like paths, like ".pods[].name" or ".pods[] | select(.status == \"Running\")"
+func (s *StatusImpl) Set(path string, val any) error {
+	_, err := s.query(opSet, path, val)
+	return err
 }
 
 // Remove deletes the value at the provided path.
-func (s *Status) Remove(path string) bool {
-	parts := strings.Split(path, ".")
-	m := s.data
-	for i, p := range parts {
-		if i == len(parts)-1 {
-			if _, ok := m[p]; ok {
-				delete(m, p)
-				return true
-			}
-			return false
-		}
-		next, ok := m[p].(map[string]any)
-		if !ok {
-			return false
-		}
-		m = next
+// It accepts jq-like paths, like ".pods[].name" or ".pods[] | select(.status == \"Running\")"
+func (s *StatusImpl) Remove(path string) error {
+	_, err := s.query(opRemove, path, nil)
+	return err
+}
+
+func normalisePath(path string) (string, error) {
+	if path == "" {
+		return "", errors.New("path cannot be empty")
 	}
-	return false
+
+	if !strings.HasPrefix(path, ".") {
+		path = "." + path
+	}
+
+	return path, nil
+}
+
+func buildQuery(op operation, path string, val any) (string, bool, error) {
+	var query string
+	persist := true
+	switch op {
+	case opGet:
+		query = fmt.Sprintf(`%s`, path)
+		persist = false
+	case opSet:
+		jsonObj, err := json.Marshal(val)
+		if err != nil {
+			return "", false, err
+		}
+		query = fmt.Sprintf(`%s = %s`, path, string(jsonObj))
+	case opRemove:
+		query = fmt.Sprintf(`del(%s)`, path)
+	default:
+		return "", false, fmt.Errorf("invalid operation: %s", op)
+	}
+
+	return query, persist, nil
+}
+
+func (s *StatusImpl) query(op operation, path string, val any) ([]any, error) {
+	var err error
+	if path, err = normalisePath(path); err != nil {
+		return nil, err
+	}
+
+	query, persist, err := buildQuery(op, path, val)
+	if err != nil {
+		return nil, err
+	}
+
+	jqQuery, err := gojq.Parse(query)
+	if err != nil {
+		return nil, err
+	}
+
+	var results []any
+	iter := jqQuery.Run(s.data)
+	for {
+		v, ok := iter.Next()
+		if !ok {
+			break
+		}
+		if err, ok := v.(error); ok {
+			return nil, err
+		}
+		results = append(results, v)
+	}
+
+	if persist {
+		s.data = results[0].(map[string]any)
+	}
+
+	return results, nil
 }

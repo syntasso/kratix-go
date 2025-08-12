@@ -1,0 +1,10 @@
+apiVersion: syntasso.io/v1
+kind: config
+metadata:
+  name: go-sdk-resource
+spec:
+  fields:
+    - name: "field0"
+      value: "value0"
+    - name: "field1"
+      value: "value1"

@@ -8,8 +8,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-var _ = Describe("Resource", func() {
-	var resource Resource
+var _ = Describe("ResourceImpl", func() {
+	var resource ResourceImpl
 	var labels map[string]string
 	var annotations map[string]string
 
@@ -23,7 +23,6 @@ var _ = Describe("Resource", func() {
 			},
 		}
 		resourceObject.SetUnstructuredContent(spec)
-
 		resourceObject.SetName("my-resource")
 		resourceObject.SetNamespace("default")
 		resourceObject.SetGroupVersionKind(schema.GroupVersionKind{
@@ -44,7 +43,7 @@ var _ = Describe("Resource", func() {
 		}
 		resourceObject.SetLabels(labels)
 
-		resource = Resource{
+		resource = ResourceImpl{
 			obj: resourceObject,
 		}
 	})
@@ -88,8 +87,20 @@ var _ = Describe("Resource", func() {
 		When("the value exists on the resource", func() {
 			It("returns the value of the provided keys", func() {
 				Expect(resource.GetValue("spec.dbConfig.size")).To(Equal("small"))
+				Expect(resource.GetValue("spec.dbConfig")).To(Equal(map[string]any{
+					"size": "small",
+				}))
 			})
 
+			It("can handle dot-prefixed keys", func() {
+				Expect(resource.GetValue(".spec.dbConfig.size")).To(Equal("small"))
+			})
+		})
+	})
+
+	Describe("ToUnstructured", func() {
+		It("returns the underlying unstructured object", func() {
+			Expect(resource.ToUnstructured()).To(Equal(resource.obj))
 		})
 	})
 })

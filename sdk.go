@@ -1,9 +1,18 @@
 package kratix
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/syntasso/kratix/api/v1alpha1"
+	"github.com/syntasso/kratix/work-creator/lib/helpers"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	kratixlib "github.com/syntasso/kratix/work-creator/lib"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"sigs.k8s.io/yaml"
 )
@@ -11,17 +20,19 @@ import (
 // The SDK interface implements the Kratix SDK core library function
 type SDKInvoker interface {
 	// ReadResourceInput reads the file in /kratix/input/object.yaml and returns a Resource
-	ReadResourceInput() (ResourceAccessor, error)
+	ReadResourceInput() (Resource, error)
 	// ReadPromiseInput reads the file in /kratix/input/object.yaml and returns a Resource
-	ReadPromiseInput() (PromiseAccessor, error)
+	ReadPromiseInput() (Promise, error)
 	// ReadDestinationSelectors
 	ReadDestinationSelectors() ([]DestinationSelector, error)
+	// ReadStatus reads the /kratix/metadata/status.yaml
+	ReadStatus() (Status, error)
 	// WriteOutput writes the content to the specifies file at the path /kratix/output/filepath
-	WriteOutput(string, []byte) error
-	// WriteStatus writes the specified status to the /kratix/output/status.yaml
-	WriteStatus(StatusModifier) error
-	// WriteDestinationSelectors writes the specified Destination Selectors to the /kratix/output/destination_selectors.yaml
-	WriteDestinationSelectors([]DestinationSelector) error
+	WriteOutput(filepath string, content []byte) error
+	// WriteStatus writes the specified status to the /kratix/metadata/status.yaml
+	WriteStatus(status Status) error
+	// WriteDestinationSelectors writes the specified Destination Selectors to the /kratix/metadata/destination_selectors.yaml
+	WriteDestinationSelectors(selectors []DestinationSelector) error
 	// WorkflowAction returns the value of KRATIX_WORKFLOW_ACTION environment variable
 	WorkflowAction() string
 	// WorkflowType returns the value of KRATIX_WORKFLOW_TYPE environment variable
@@ -31,9 +42,7 @@ type SDKInvoker interface {
 	// PipelineName returns the value of the KRATIX_PIPELINE_NAME environment variable
 	PipelineName() string
 	// PublishStatus updates the status of the provided resource with the provided status
-	PublishStatus(ResourceAccessor, StatusModifier) error
-	// ReadStatus reads the /kratix/output/status.yaml
-	ReadStatus() (StatusModifier, error)
+	PublishStatus(resource Resource, status Status) error
 }
 
 // ensure SDKInvoker implemented
@@ -42,22 +51,34 @@ var _ SDKInvoker = (*KratixSDK)(nil)
 // KratixSDK implements the SDKInvoker interface for reading and writing
 // Kratix workflow data.
 type KratixSDK struct {
-	objectPath               string
-	destinationSelectorsPath string
-	outputDir                string
+	outputDir   string
+	inputDir    string
+	metadataDir string
+
+	inputObject  string
+	objectClient UpdateStatusInterface
+}
+
+//go:generate go tool counterfeiter . UpdateStatusInterface
+type UpdateStatusInterface interface {
+	UpdateStatus(ctx context.Context, obj *unstructured.Unstructured, opts metav1.UpdateOptions) (*unstructured.Unstructured, error)
 }
 
 // Option configures KratixSDK.
 type Option func(*KratixSDK)
 
-// WithObjectPath overrides the path to the object input file.
-func WithObjectPath(p string) Option {
-	return func(k *KratixSDK) { k.objectPath = p }
+// WithInputDir overrides the path to the input directory.
+func WithInputDir(p string) Option {
+	return func(k *KratixSDK) { k.inputDir = p }
 }
 
-// WithDestinationSelectorsPath overrides the path to the destination selectors input file.
-func WithDestinationSelectorsPath(p string) Option {
-	return func(k *KratixSDK) { k.destinationSelectorsPath = p }
+// WithInputObject overrides the name of the input object file.
+func WithInputObject(p string) Option {
+	return func(k *KratixSDK) { k.inputObject = p }
+}
+
+func WithMetadataDir(p string) Option {
+	return func(k *KratixSDK) { k.metadataDir = p }
 }
 
 // WithOutputDir overrides the output directory path.
@@ -65,12 +86,18 @@ func WithOutputDir(p string) Option {
 	return func(k *KratixSDK) { k.outputDir = p }
 }
 
+// WithObjectClient overrides the Kubernetes client for testing
+func WithObjectClient(client UpdateStatusInterface) Option {
+	return func(k *KratixSDK) { k.objectClient = client }
+}
+
 // New creates a KratixSDK with optional configuration overrides.
 func New(opts ...Option) *KratixSDK {
 	sdk := &KratixSDK{
-		objectPath:               "/kratix/input/object.yaml",
-		destinationSelectorsPath: "/kratix/input/destination_selectors.yaml",
-		outputDir:                "/kratix/output",
+		inputDir:    "/kratix/input",
+		metadataDir: "/kratix/metadata",
+		outputDir:   "/kratix/output",
+		inputObject: "object.yaml",
 	}
 	for _, opt := range opts {
 		opt(sdk)
@@ -78,35 +105,39 @@ func New(opts ...Option) *KratixSDK {
 	return sdk
 }
 
-// ReadResourceInput reads the object YAML and returns a Resource.
-func (k *KratixSDK) ReadResourceInput() (ResourceAccessor, error) {
-	data, err := os.ReadFile(k.objectPath)
+// ReadResourceInput reads the Input Object YAML and returns a Resource.
+func (k *KratixSDK) ReadResourceInput() (Resource, error) {
+	data, err := os.ReadFile(filepath.Join(k.inputDir, k.inputObject))
 	if err != nil {
 		return nil, fmt.Errorf("read object input: %w", err)
 	}
-	r := &Resource{}
+	r := &ResourceImpl{}
 	if err := yaml.Unmarshal(data, &r.obj.Object); err != nil {
 		return nil, fmt.Errorf("unmarshal object: %w", err)
 	}
 	return r, nil
 }
 
-// ReadPromiseInput reads the object YAML and returns it as a Promise.
-func (k *KratixSDK) ReadPromiseInput() (PromiseAccessor, error) {
-	data, err := os.ReadFile(k.objectPath)
+// ReadPromiseInput reads the Input Promise YAML and returns it as a Promise.
+func (k *KratixSDK) ReadPromiseInput() (Promise, error) {
+	data, err := os.ReadFile(filepath.Join(k.inputDir, k.inputObject))
 	if err != nil {
 		return nil, fmt.Errorf("read promise input: %w", err)
 	}
-	var out map[string]any
-	if err := yaml.Unmarshal(data, &out); err != nil {
+	p := &v1alpha1.Promise{}
+	if err := yaml.Unmarshal(data, &p); err != nil {
 		return nil, fmt.Errorf("unmarshal promise: %w", err)
 	}
-	return out, nil
+	obj, err := p.ToUnstructured()
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal promise: %w", err)
+	}
+	return &PromiseImpl{ResourceImpl: ResourceImpl{obj: *obj}, promise: p}, nil
 }
 
 // ReadDestinationSelectors reads destination selectors from file.
 func (k *KratixSDK) ReadDestinationSelectors() ([]DestinationSelector, error) {
-	data, err := os.ReadFile(k.destinationSelectorsPath)
+	data, err := os.ReadFile(filepath.Join(k.metadataDir, "destination_selectors.yaml"))
 	if err != nil {
 		return nil, fmt.Errorf("read destination selectors: %w", err)
 	}
@@ -117,9 +148,22 @@ func (k *KratixSDK) ReadDestinationSelectors() ([]DestinationSelector, error) {
 	return selectors, nil
 }
 
-// WriteOutput writes content to the named file under the output directory.
-func (k *KratixSDK) WriteOutput(relPath string, content []byte) error {
-	full := filepath.Join(k.outputDir, relPath)
+// ReadStatus reads the status.yaml from the output directory.
+func (k *KratixSDK) ReadStatus() (Status, error) {
+	// TODO: fix this; status.yaml should be read from the /kratix/metadata directory
+	data, err := os.ReadFile(filepath.Join(k.metadataDir, "status.yaml"))
+	if err != nil {
+		return nil, fmt.Errorf("read status: %w", err)
+	}
+	var m map[string]any
+	if err := yaml.Unmarshal(data, &m); err != nil {
+		return nil, fmt.Errorf("unmarshal status: %w", err)
+	}
+	return &StatusImpl{data: m}, nil
+}
+
+func (k *KratixSDK) write(dir, relPath string, content []byte) error {
+	full := filepath.Join(dir, relPath)
 	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
 		return fmt.Errorf("create output dir: %w", err)
 	}
@@ -129,9 +173,16 @@ func (k *KratixSDK) WriteOutput(relPath string, content []byte) error {
 	return nil
 }
 
+// WriteOutput writes content to the named file under the output directory.
+func (k *KratixSDK) WriteOutput(relPath string, content []byte) error {
+	return k.write(k.outputDir, relPath, content)
+}
+
 // WriteStatus writes the provided Status to status.yaml.
-func (k *KratixSDK) WriteStatus(s StatusModifier) error {
-	sts, ok := s.(*Status)
+func (k *KratixSDK) WriteStatus(s Status) error {
+	// TODO: do we need to passa StatusModifier or is the Status object enough?
+	// TODO: make sure this merges the existing status from the file with the new status
+	sts, ok := s.(*StatusImpl)
 	if !ok {
 		return fmt.Errorf("unsupported status type %T", s)
 	}
@@ -139,16 +190,19 @@ func (k *KratixSDK) WriteStatus(s StatusModifier) error {
 	if err != nil {
 		return fmt.Errorf("marshal status: %w", err)
 	}
-	return k.WriteOutput("status.yaml", data)
+	// TODO: fix this; status.yaml should be written to the /kratix/metadata directory
+	return k.write(k.metadataDir, "status.yaml", data)
 }
 
 // WriteDestinationSelectors writes the selectors to destination_selectors.yaml.
 func (k *KratixSDK) WriteDestinationSelectors(ds []DestinationSelector) error {
+	// TODO: make sure this merges the existing destination selectors with the new ones
 	data, err := yaml.Marshal(ds)
 	if err != nil {
 		return fmt.Errorf("marshal destination selectors: %w", err)
 	}
-	return k.WriteOutput("destination_selectors.yaml", data)
+	// TODO: fix this; destination_selectors.yaml should be written to the /kratix/metadata directory
+	return k.write(k.metadataDir, "destination_selectors.yaml", data)
 }
 
 // WorkflowAction returns the workflow action environment variable.
@@ -171,51 +225,43 @@ func (k *KratixSDK) PipelineName() string {
 	return os.Getenv("KRATIX_PIPELINE_NAME")
 }
 
-// PublishStatus merges the provided status into the resource and persists it.
-func (k *KratixSDK) PublishStatus(res ResourceAccessor, s StatusModifier) error {
-	r, ok := res.(*Resource)
-	if !ok {
-		return fmt.Errorf("unsupported resource type %T", res)
+func (k *KratixSDK) getObjectClient(res Resource) (UpdateStatusInterface, error) {
+	if k.objectClient != nil {
+		return k.objectClient, nil
 	}
-	newStatus, ok := s.(*Status)
-	if !ok {
-		return fmt.Errorf("unsupported status type %T", s)
+
+	gvr := schema.GroupVersionResource{
+		Group:    res.GetGroupVersionKind().Group,
+		Version:  res.GetGroupVersionKind().Version,
+		Resource: os.Getenv("KRATIX_CRD_PLURAL"),
 	}
-	existing, ok := r.obj.Object["status"].(map[string]any)
-	if !ok {
-		existing = map[string]any{}
-	}
-	mergeMaps(existing, newStatus.data)
-	r.obj.Object["status"] = existing
-	data, err := yaml.Marshal(existing)
+	client, err := helpers.GetK8sClient()
 	if err != nil {
-		return fmt.Errorf("marshal status: %w", err)
+		return nil, err
 	}
-	return k.WriteOutput("status.yaml", data)
+	return client.Resource(gvr).Namespace(res.GetNamespace()), nil
 }
 
-// ReadStatus reads the status.yaml from the output directory.
-func (k *KratixSDK) ReadStatus() (StatusModifier, error) {
-	data, err := os.ReadFile(filepath.Join(k.outputDir, "status.yaml"))
+// PublishStatus takes a Resource and a Status, and then implements the logic to
+// merge the status into the resource and persist it via the Kubernetes API.
+func (k *KratixSDK) PublishStatus(res Resource, incomingStatus Status) error {
+	objectClient, err := k.getObjectClient(res)
 	if err != nil {
-		return nil, fmt.Errorf("read status: %w", err)
+		return err
 	}
-	var m map[string]any
-	if err := yaml.Unmarshal(data, &m); err != nil {
-		return nil, fmt.Errorf("unmarshal status: %w", err)
-	}
-	return &Status{data: m}, nil
-}
 
-// mergeMaps recursively merges src into dst.
-func mergeMaps(dst, src map[string]any) {
-	for k, v := range src {
-		if mv, ok := v.(map[string]any); ok {
-			if existing, ok := dst[k].(map[string]any); ok {
-				mergeMaps(existing, mv)
-				continue
-			}
-		}
-		dst[k] = v
+	existingStatus, err := res.GetStatus()
+	if err != nil {
+		return err
 	}
+
+	newStatus := kratixlib.MergeStatuses(existingStatus.ToMap(), incomingStatus.ToMap())
+	uRes := res.ToUnstructured()
+	uRes.Object["status"] = newStatus
+
+	if _, err = objectClient.UpdateStatus(context.Background(), &uRes, metav1.UpdateOptions{}); err != nil {
+		return fmt.Errorf("failed to update status: %w", err)
+	}
+
+	return nil
 }

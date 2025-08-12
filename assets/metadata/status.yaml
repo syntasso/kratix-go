@@ -1,0 +1,4 @@
+message: "input status"
+map:
+  key: value
+  anotherKey: another-value
