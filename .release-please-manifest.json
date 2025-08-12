@@ -1,1 +1,3 @@
-.release-please-manifest.json
+{
+  ".": "0.1.0"
+}
