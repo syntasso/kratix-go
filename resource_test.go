@@ -91,6 +91,10 @@ var _ = Describe("ResourceImpl", func() {
 					"size": "small",
 				}))
 			})
+
+			It("can handle dot-prefixed keys", func() {
+				Expect(resource.GetValue(".spec.dbConfig.size")).To(Equal("small"))
+			})
 		})
 	})
 

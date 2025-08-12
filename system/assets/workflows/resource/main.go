@@ -67,7 +67,7 @@ func main() {
 	}
 
 	log.Println("Publishing 'publishedDirectly' status...")
-	publishedStatus := &kratix.StatusImpl{}
+	publishedStatus := kratix.NewStatus()
 	publishedStatus.Set("publishedDirectly", true)
 	err = sdk.PublishStatus(resource, publishedStatus)
 	if err != nil {
@@ -75,7 +75,7 @@ func main() {
 	}
 
 	log.Println("Writing status file...")
-	status := &kratix.StatusImpl{}
+	status := kratix.NewStatus()
 	status.Set("viaFile", true)
 	err = sdk.WriteStatus(status)
 	if err != nil {

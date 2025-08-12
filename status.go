@@ -40,6 +40,20 @@ func (s *StatusImpl) ToMap() map[string]any {
 	return s.data
 }
 
+// NewStatus creates a new Status with an empty map.
+func NewStatus() Status {
+	return &StatusImpl{
+		data: make(map[string]any),
+	}
+}
+
+// NewStatusFromMap creates a new Status and initialises it with the provided map.
+func NewStatusFromMap(data map[string]any) Status {
+	return &StatusImpl{
+		data: data,
+	}
+}
+
 // Get retrieves the value at the provided path.
 // It can be used to execute a jq-like query on the Status data and returns the results
 // Examples:

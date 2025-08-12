@@ -30,11 +30,11 @@ build: ## Build the Go package
 ##@ Testing
 
 .PHONY: test
-test: ## Run unit tests
+test: fmt vet ## Run unit tests
 	go run github.com/onsi/ginkgo/v2/ginkgo -r --skip-package system ./...
 
 .PHONY: test-coverage
-test-coverage: ## Run tests with coverage
+test-coverage: fmt vet ## Run tests with coverage
 	go run github.com/onsi/ginkgo/v2/ginkgo -r --skip-package system -cover -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
 

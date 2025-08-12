@@ -38,6 +38,7 @@ var _ Resource = (*ResourceImpl)(nil)
 
 // GetValue returns the value at the provided path.
 func (r *ResourceImpl) GetValue(path string) (any, error) {
+	path = strings.TrimPrefix(path, ".")
 	val, found, err := unstructured.NestedFieldNoCopy(r.obj.Object, strings.Split(path, ".")...)
 	if err != nil {
 		return nil, err
