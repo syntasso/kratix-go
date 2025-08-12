@@ -4,6 +4,7 @@ on:
   push:
     branches: [ main ]
   pull_request:
+    branches-ignore: [ "release-please--**" ]
 
 jobs:
   test:
@@ -135,7 +136,17 @@ jobs:
         
     - name: Install Release Please
       run: npm install -g release-please
-      
+
+    - name: Create pending releases
+      if: github.ref == 'refs/heads/main'
+      env:
+        TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        release-please \
+          --token=$TOKEN \
+          --repo-url=syntasso/kratix-go \
+          github-release
+
     - name: Create Release PR
       run: |
         release-please release-pr \
