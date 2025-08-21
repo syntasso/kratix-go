@@ -256,10 +256,16 @@ func readFileContent(baseDir, relativePath string) []byte {
 
 func copyAssetsToMetadata(metadataDir string) {
 	GinkgoHelper()
-	for _, file := range []string{"destination_selectors.yaml", "status.yaml"} {
-		input, err := os.ReadFile(filepath.Join("assets/metadata", file))
+	assetsDir := "assets/metadata"
+	filesInDir, err := os.ReadDir(assetsDir)
+	Expect(err).ToNot(HaveOccurred())
+	for _, file := range filesInDir {
+		if file.IsDir() {
+			continue
+		}
+		input, err := os.ReadFile(filepath.Join(assetsDir, file.Name()))
 		Expect(err).ToNot(HaveOccurred())
-		err = os.WriteFile(filepath.Join(metadataDir, file), input, 0644)
+		err = os.WriteFile(filepath.Join(metadataDir, file.Name()), input, 0644)
 		Expect(err).ToNot(HaveOccurred())
 	}
 }

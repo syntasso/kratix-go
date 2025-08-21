@@ -48,6 +48,11 @@ type SDKInvoker interface {
 // ensure SDKInvoker implemented
 var _ SDKInvoker = (*KratixSDK)(nil)
 
+const (
+	destinationSelectorsFile = "destination-selectors.yaml"
+	statusFile               = "status.yaml"
+)
+
 // KratixSDK implements the SDKInvoker interface for reading and writing
 // Kratix workflow data.
 type KratixSDK struct {
@@ -137,7 +142,7 @@ func (k *KratixSDK) ReadPromiseInput() (Promise, error) {
 
 // ReadDestinationSelectors reads destination selectors from file.
 func (k *KratixSDK) ReadDestinationSelectors() ([]DestinationSelector, error) {
-	data, err := os.ReadFile(filepath.Join(k.metadataDir, "destination_selectors.yaml"))
+	data, err := os.ReadFile(filepath.Join(k.metadataDir, destinationSelectorsFile))
 	if err != nil {
 		return nil, fmt.Errorf("read destination selectors: %w", err)
 	}
@@ -150,8 +155,7 @@ func (k *KratixSDK) ReadDestinationSelectors() ([]DestinationSelector, error) {
 
 // ReadStatus reads the status.yaml from the output directory.
 func (k *KratixSDK) ReadStatus() (Status, error) {
-	// TODO: fix this; status.yaml should be read from the /kratix/metadata directory
-	data, err := os.ReadFile(filepath.Join(k.metadataDir, "status.yaml"))
+	data, err := os.ReadFile(filepath.Join(k.metadataDir, statusFile))
 	if err != nil {
 		return nil, fmt.Errorf("read status: %w", err)
 	}
@@ -190,19 +194,16 @@ func (k *KratixSDK) WriteStatus(s Status) error {
 	if err != nil {
 		return fmt.Errorf("marshal status: %w", err)
 	}
-	// TODO: fix this; status.yaml should be written to the /kratix/metadata directory
-	return k.write(k.metadataDir, "status.yaml", data)
+	return k.write(k.metadataDir, statusFile, data)
 }
 
 // WriteDestinationSelectors writes the selectors to destination_selectors.yaml.
 func (k *KratixSDK) WriteDestinationSelectors(ds []DestinationSelector) error {
-	// TODO: make sure this merges the existing destination selectors with the new ones
 	data, err := yaml.Marshal(ds)
 	if err != nil {
 		return fmt.Errorf("marshal destination selectors: %w", err)
 	}
-	// TODO: fix this; destination_selectors.yaml should be written to the /kratix/metadata directory
-	return k.write(k.metadataDir, "destination-selectors.yaml", data)
+	return k.write(k.metadataDir, destinationSelectorsFile, data)
 }
 
 // WorkflowAction returns the workflow action environment variable.
