@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0](https://github.com/syntasso/kratix-go/compare/v0.1.0...v0.2.0) (2025-08-21)
+
+
+### Features
+
+* use merge patch to update status ([9bb8f62](https://github.com/syntasso/kratix-go/commit/9bb8f6283a9ca06fa40aef62f4e0ebc4cc508e79))
+
+
+### Bug Fixes
+
+* use correct destination selectors file name ([96bd778](https://github.com/syntasso/kratix-go/commit/96bd778f6a6e8da39684bc24f58d2197dc9c225e))
+* use the correct destination selectors path ([1ab8909](https://github.com/syntasso/kratix-go/commit/1ab89094cf3c131dd72063eea59b8cb04242cb3f))
+
 ## [0.1.0](https://github.com/syntasso/kratix-go/compare/v0.1.0...v0.1.0) (2025-08-12)
 
 
