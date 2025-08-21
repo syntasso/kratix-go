@@ -202,7 +202,7 @@ func (k *KratixSDK) WriteDestinationSelectors(ds []DestinationSelector) error {
 		return fmt.Errorf("marshal destination selectors: %w", err)
 	}
 	// TODO: fix this; destination_selectors.yaml should be written to the /kratix/metadata directory
-	return k.write(k.metadataDir, "destination_selectors.yaml", data)
+	return k.write(k.metadataDir, "destination-selectors.yaml", data)
 }
 
 // WorkflowAction returns the workflow action environment variable.
