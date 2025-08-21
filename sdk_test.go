@@ -152,7 +152,7 @@ var _ = Describe("E2E Tests", func() {
 					}})
 					Expect(err).ToNot(HaveOccurred())
 
-					content := readFileContent(metadataDir, "destination_selectors.yaml")
+					content := readFileContent(metadataDir, "destination-selectors.yaml")
 					Expect(content).To(MatchYAML("[{directory: foo/bar, matchLabels: {app: new-app}}]"))
 				})
 

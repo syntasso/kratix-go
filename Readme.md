@@ -123,7 +123,7 @@ func main() {
 - **`ReadPromiseInput()`**: Read the promise from `/kratix/input/object.yaml` (for Promise Workflows)
 - **`WriteOutput(filename, content)`**: Write content to `/kratix/output/`
 - **`WriteStatus(status)`**: Write status to `/kratix/metadata/status.yaml`
-- **`WriteDestinationSelectors(selectors)`**: Write destination selectors to `/kratix/metadata/destination_selectors.yaml`
+- **`WriteDestinationSelectors(selectors)`**: Write destination selectors to `/kratix/metadata/destination-selectors.yaml`
 - **`PublishStatus(resource, status)`**: Update the resource status in Kubernetes
 
 ## Development
