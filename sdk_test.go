@@ -1,6 +1,7 @@
 package kratix_test
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 
@@ -16,7 +17,7 @@ var _ = Describe("E2E Tests", func() {
 		sdk              *kratix.KratixSDK
 		outputDir        string
 		metadataDir      string
-		mockObjectClient *kratixgofakes.FakeUpdateStatusInterface
+		mockObjectClient *kratixgofakes.FakeResourceInterface
 	)
 
 	BeforeEach(func() {
@@ -27,7 +28,7 @@ var _ = Describe("E2E Tests", func() {
 		metadataDir, err = os.MkdirTemp("", "kratix-e2e-test")
 		Expect(err).ToNot(HaveOccurred())
 
-		mockObjectClient = &kratixgofakes.FakeUpdateStatusInterface{}
+		mockObjectClient = &kratixgofakes.FakeResourceInterface{}
 
 		sdk = kratix.New(
 			kratix.WithInputDir("assets/input"),
@@ -178,19 +179,16 @@ var _ = Describe("E2E Tests", func() {
 
 				Expect(sdk.PublishStatus(resource, status)).To(Succeed())
 
-				Expect(mockObjectClient.UpdateStatusCallCount()).To(Equal(1))
-				_, updatedResource, _ := mockObjectClient.UpdateStatusArgsForCall(0)
+				Expect(mockObjectClient.PatchCallCount()).To(Equal(1))
+				_, resourceName, _, statusBytes, _, _ := mockObjectClient.PatchArgsForCall(0)
 
-				resourceStatus, err := resource.GetStatus()
-				Expect(err).ToNot(HaveOccurred())
-
-				expectedStatus := resourceStatus.ToMap()
-				expectedStatus["nested"] = map[string]any{
-					"field": "nested-value",
-				}
-				expectedStatus["message"] = "hello from publish"
-
-				Expect(updatedResource.Object["status"]).To(Equal(expectedStatus))
+				var patchData map[string]any
+				Expect(resourceName).To(Equal("my-resource"))
+				Expect(json.Unmarshal(statusBytes, &patchData)).To(Succeed())
+				Expect(patchData["status"]).To(SatisfyAll(
+					HaveKeyWithValue("nested", HaveKeyWithValue("field", "nested-value")),
+					HaveKeyWithValue("message", "hello from publish"),
+				))
 			})
 		})
 	})

@@ -8,8 +8,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// TODO: Do we want a ToUnstructured() in the Resource interface object?
-
 type Resource interface {
 	// GetValue queries the resource and returns the value at the specified path e.g. spec.dbConfig.size
 	GetValue(string) (any, error)
