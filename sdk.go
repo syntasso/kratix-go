@@ -2,6 +2,7 @@ package kratix
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,9 +11,9 @@ import (
 	"github.com/syntasso/kratix/work-creator/lib/helpers"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	kratixlib "github.com/syntasso/kratix/work-creator/lib"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
 
 	"sigs.k8s.io/yaml"
 )
@@ -61,12 +62,12 @@ type KratixSDK struct {
 	metadataDir string
 
 	inputObject  string
-	objectClient UpdateStatusInterface
+	objectClient ResourceInterface
 }
 
-//go:generate go tool counterfeiter . UpdateStatusInterface
-type UpdateStatusInterface interface {
-	UpdateStatus(ctx context.Context, obj *unstructured.Unstructured, opts metav1.UpdateOptions) (*unstructured.Unstructured, error)
+//go:generate go tool counterfeiter . ResourceInterface
+type ResourceInterface interface {
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, options metav1.PatchOptions, subresources ...string) (*unstructured.Unstructured, error)
 }
 
 // Option configures KratixSDK.
@@ -92,7 +93,7 @@ func WithOutputDir(p string) Option {
 }
 
 // WithObjectClient overrides the Kubernetes client for testing
-func WithObjectClient(client UpdateStatusInterface) Option {
+func WithObjectClient(client ResourceInterface) Option {
 	return func(k *KratixSDK) { k.objectClient = client }
 }
 
@@ -184,8 +185,6 @@ func (k *KratixSDK) WriteOutput(relPath string, content []byte) error {
 
 // WriteStatus writes the provided Status to status.yaml.
 func (k *KratixSDK) WriteStatus(s Status) error {
-	// TODO: do we need to passa StatusModifier or is the Status object enough?
-	// TODO: make sure this merges the existing status from the file with the new status
 	sts, ok := s.(*StatusImpl)
 	if !ok {
 		return fmt.Errorf("unsupported status type %T", s)
@@ -226,7 +225,7 @@ func (k *KratixSDK) PipelineName() string {
 	return os.Getenv("KRATIX_PIPELINE_NAME")
 }
 
-func (k *KratixSDK) getObjectClient(res Resource) (UpdateStatusInterface, error) {
+func (k *KratixSDK) getObjectClient(res Resource) (ResourceInterface, error) {
 	if k.objectClient != nil {
 		return k.objectClient, nil
 	}
@@ -251,17 +250,17 @@ func (k *KratixSDK) PublishStatus(res Resource, incomingStatus Status) error {
 		return err
 	}
 
-	existingStatus, err := res.GetStatus()
-	if err != nil {
-		return err
+	patchData := map[string]any{
+		"status": incomingStatus.ToMap(),
 	}
 
-	newStatus := kratixlib.MergeStatuses(existingStatus.ToMap(), incomingStatus.ToMap())
-	uRes := res.ToUnstructured()
-	uRes.Object["status"] = newStatus
+	patchBytes, err := json.Marshal(patchData)
+	if err != nil {
+		return fmt.Errorf("failed to marshal status patch: %w", err)
+	}
 
-	if _, err = objectClient.UpdateStatus(context.Background(), &uRes, metav1.UpdateOptions{}); err != nil {
-		return fmt.Errorf("failed to update status: %w", err)
+	if _, err = objectClient.Patch(context.Background(), res.GetName(), types.MergePatchType, patchBytes, metav1.PatchOptions{}, "status"); err != nil {
+		return fmt.Errorf("failed to patch status: %w", err)
 	}
 
 	return nil
