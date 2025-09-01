@@ -62,6 +62,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to get fields: %v", err)
 	}
+	log.Printf("spec.fields: %v", fields)
 
 	// Create a Kubernetes resource (e.g., ConfigMap)
 	cm := &corev1.ConfigMap{
@@ -116,6 +117,20 @@ func main() {
 	}
 }
 ```
+> [!IMPORTANT]
+> Note that if you get an error running `go mod tidy` like below:
+> ```
+> $ go mod tidy
+> ...
+> go: finding module for package k8s.io/api/networking/v1alpha1
+> go: github.com/syntasso/kratix-marketplace/ai imports
+>        github.com/syntasso/kratix-go imports
+>        github.com/syntasso/kratix/api/v1alpha1 imports
+>        k8s.io/client-go/kubernetes/scheme imports
+>        k8s.io/api/networking/v1alpha1: module k8s.io/api@latest found (v0.34.0), but does not contain package k8s.io/api/networking/v1alpha1
+> ```
+>
+> You can fix it by running `go get github.com/syntasso/kratix-go` before `go mod tidy`.
 
 ### Key SDK Methods
 
