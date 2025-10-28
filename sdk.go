@@ -44,6 +44,15 @@ type SDKInvoker interface {
 	PipelineName() string
 	// PublishStatus updates the status of the provided resource with the provided status
 	PublishStatus(resource Resource, status Status) error
+
+	// IsPromiseWorkflow returns true if the workflow is a promise workflow
+	IsPromiseWorkflow() bool
+	// IsResourceWorkflow returns true if the workflow is a resource workflow
+	IsResourceWorkflow() bool
+	// IsConfigureAction returns true if the workflow is a configure action
+	IsConfigureAction() bool
+	// IsDeleteAction returns true if the workflow is a delete action
+	IsDeleteAction() bool
 }
 
 // ensure SDKInvoker implemented
@@ -264,4 +273,24 @@ func (k *KratixSDK) PublishStatus(res Resource, incomingStatus Status) error {
 	}
 
 	return nil
+}
+
+// IsPromiseWorkflow returns true if the workflow is a promise workflow
+func (k *KratixSDK) IsPromiseWorkflow() bool {
+	return k.WorkflowType() == "promise"
+}
+
+// IsResourceWorkflow returns true if the workflow is a resource workflow
+func (k *KratixSDK) IsResourceWorkflow() bool {
+	return k.WorkflowType() == "resource"
+}
+
+// IsConfigureAction returns true if the workflow is a configure action
+func (k *KratixSDK) IsConfigureAction() bool {
+	return k.WorkflowAction() == "configure"
+}
+
+// IsDeleteAction returns true if the workflow is a delete action
+func (k *KratixSDK) IsDeleteAction() bool {
+	return k.WorkflowAction() == "delete"
 }
