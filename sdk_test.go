@@ -242,6 +242,56 @@ var _ = Describe("E2E Tests", func() {
 			})
 		})
 	})
+
+	Describe("Workflow type and action helpers", func() {
+		Describe("IsPromiseWorkflow", func() {
+			It("returns true when workflow type is promise", func() {
+				os.Setenv("KRATIX_WORKFLOW_TYPE", "promise")
+				Expect(sdk.IsPromiseWorkflow()).To(BeTrue())
+			})
+
+			It("returns false when workflow type is not promise", func() {
+				os.Setenv("KRATIX_WORKFLOW_TYPE", "resource")
+				Expect(sdk.IsPromiseWorkflow()).To(BeFalse())
+			})
+		})
+
+		Describe("IsResourceWorkflow", func() {
+			It("returns true when workflow type is resource", func() {
+				os.Setenv("KRATIX_WORKFLOW_TYPE", "resource")
+				Expect(sdk.IsResourceWorkflow()).To(BeTrue())
+			})
+
+			It("returns false when workflow type is not resource", func() {
+				os.Setenv("KRATIX_WORKFLOW_TYPE", "promise")
+				Expect(sdk.IsResourceWorkflow()).To(BeFalse())
+			})
+		})
+
+		Describe("IsConfigureAction", func() {
+			It("returns true when workflow action is configure", func() {
+				os.Setenv("KRATIX_WORKFLOW_ACTION", "configure")
+				Expect(sdk.IsConfigureAction()).To(BeTrue())
+			})
+
+			It("returns false when workflow action is not configure", func() {
+				os.Setenv("KRATIX_WORKFLOW_ACTION", "delete")
+				Expect(sdk.IsConfigureAction()).To(BeFalse())
+			})
+		})
+
+		Describe("IsDeleteAction", func() {
+			It("returns true when workflow action is delete", func() {
+				os.Setenv("KRATIX_WORKFLOW_ACTION", "delete")
+				Expect(sdk.IsDeleteAction()).To(BeTrue())
+			})
+
+			It("returns false when workflow action is not delete", func() {
+				os.Setenv("KRATIX_WORKFLOW_ACTION", "configure")
+				Expect(sdk.IsDeleteAction()).To(BeFalse())
+			})
+		})
+	})
 })
 
 func readFileContent(baseDir, relativePath string) []byte {
