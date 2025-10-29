@@ -151,6 +151,5 @@ jobs:
       run: |
         release-please release-pr \
           --repo-url="${{ github.repository }}" \
-          --package-name="kratix-go" \
           --token="${{ secrets.GITHUB_TOKEN }}" \
           --release-type="go"
