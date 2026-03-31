@@ -55,16 +55,16 @@ type SDKInvoker interface {
 	// IsDeleteAction returns true if the workflow is a delete action
 	IsDeleteAction() bool
 
-	// SuspendPipeline suspends the pipeline by writing workflow-control.yaml with suspend: true.
-	// Kratix will stop further pipeline execution and set the workflow phase to Suspended.
-	// If a message is provided, it will be surfaced in the object's status.
-	SuspendPipeline(message string) error
+	// SuspendWorkflow suspends the Workflow by writing workflow-control.yaml with suspend: true.
+	// Kratix will stop any further pipeline execution and set the current pipeline execution phase to Suspended.
+	// If a message is provided, it will be surfaced in the object's status (status.kratix.workflows.pipelines[PIPELINE_NAME].message).
+	SuspendWorkflow(message string) error
 
-	// RetryAfter configures the pipeline to be retried after the given duration.
+	// RetryAfter configures the current pipeline to be retried after the given duration.
 	// The duration must be a valid Go duration string (e.g. "5m", "1h30m", "300ms").
-	// Kratix will requeue the pipeline after the specified duration and increment
-	// the attempt counter in the object's status.
-	// If a message is provided, it will be surfaced in the object's status.
+	// Kratix will requeue this pipeline after the specified duration and increment
+	// the attempt counter in the object's status (status.kratix.workflows.pipelines[PIPELINE_NAME].attempts).
+	// If a message is provided, it will be surfaced in the object's status (status.kratix.workflows.pipelines[PIPELINE_NAME].message).
 	RetryAfter(duration string, message string) error
 }
 
@@ -315,8 +315,8 @@ func (k *KratixSDK) IsDeleteAction() bool {
 	return k.WorkflowAction() == "delete"
 }
 
-// Suspend suspends the pipeline by writing workflow-control.yaml with suspend: true.
-func (k *KratixSDK) SuspendPipeline(message string) error {
+// Suspend suspends the Workflow by writing workflow-control.yaml with suspend: true.
+func (k *KratixSDK) SuspendWorkflow(message string) error {
 	return k.writeWorkflowControl(
 		workflowControl{
 			Suspend: true,

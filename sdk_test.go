@@ -244,15 +244,15 @@ var _ = Describe("E2E Tests", func() {
 	})
 
 	Describe("workflow-control.yaml file", func() {
-		Describe("SuspendPipeline", func() {
+		Describe("SuspendWorkflow", func() {
 			It("writes workflow-control.yaml with suspend: true", func() {
-				Expect(sdk.SuspendPipeline("")).To(Succeed())
+				Expect(sdk.SuspendWorkflow("")).To(Succeed())
 				content := readFileContent(metadataDir, "workflow-control.yaml")
 				Expect(content).To(MatchYAML(`{suspend: true}`))
 			})
 
 			It("includes the message when provided", func() {
-				Expect(sdk.SuspendPipeline("waiting for dependency")).To(Succeed())
+				Expect(sdk.SuspendWorkflow("waiting for dependency")).To(Succeed())
 				content := readFileContent(metadataDir, "workflow-control.yaml")
 				Expect(content).To(MatchYAML(`{suspend: true, message: waiting for dependency}`))
 			})
