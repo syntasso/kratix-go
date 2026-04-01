@@ -55,17 +55,17 @@ type SDKInvoker interface {
 	// IsDeleteAction returns true if the workflow is a delete action
 	IsDeleteAction() bool
 
-	// SuspendWorkflow suspends the Workflow by writing workflow-control.yaml with suspend: true.
+	// WriteSuspend suspends the Workflow by writing workflow-control.yaml with suspend: true.
 	// Kratix will stop any further pipeline execution and set the current pipeline execution phase to Suspended.
 	// If a message is provided, it will be surfaced in the object's status (status.kratix.workflows.pipelines[PIPELINE_NAME].message).
-	SuspendWorkflow(message string) error
+	WriteSuspend(message string) error
 
-	// RetryAfter configures the current pipeline to be retried after the given duration.
+	// WriteRetryAfter configures the current pipeline to be retried after the given duration.
 	// The duration must be a valid Go duration string (e.g. "5m", "1h30m", "300ms").
 	// Kratix will requeue this pipeline after the specified duration and increment
 	// the attempt counter in the object's status (status.kratix.workflows.pipelines[PIPELINE_NAME].attempts).
 	// If a message is provided, it will be surfaced in the object's status (status.kratix.workflows.pipelines[PIPELINE_NAME].message).
-	RetryAfter(duration string, message string) error
+	WriteRetryAfter(duration string, message string) error
 }
 
 // ensure SDKInvoker implemented
@@ -316,7 +316,7 @@ func (k *KratixSDK) IsDeleteAction() bool {
 }
 
 // Suspend suspends the Workflow by writing workflow-control.yaml with suspend: true.
-func (k *KratixSDK) SuspendWorkflow(message string) error {
+func (k *KratixSDK) WriteSuspend(message string) error {
 	return k.writeWorkflowControl(
 		workflowControl{
 			Suspend: true,
@@ -325,7 +325,7 @@ func (k *KratixSDK) SuspendWorkflow(message string) error {
 }
 
 // RetryAfter configures the pipeline to be retried after the given duration.
-func (k *KratixSDK) RetryAfter(duration string, message string) error {
+func (k *KratixSDK) WriteRetryAfter(duration string, message string) error {
 	if duration == "" {
 		return fmt.Errorf("duration must be provided")
 	}

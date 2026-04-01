@@ -244,40 +244,40 @@ var _ = Describe("E2E Tests", func() {
 	})
 
 	Describe("workflow-control.yaml file", func() {
-		Describe("SuspendWorkflow", func() {
+		Describe("WriteSuspend", func() {
 			It("writes workflow-control.yaml with suspend: true", func() {
-				Expect(sdk.SuspendWorkflow("")).To(Succeed())
+				Expect(sdk.WriteSuspend("")).To(Succeed())
 				content := readFileContent(metadataDir, "workflow-control.yaml")
 				Expect(content).To(MatchYAML(`{suspend: true}`))
 			})
 
 			It("includes the message when provided", func() {
-				Expect(sdk.SuspendWorkflow("waiting for dependency")).To(Succeed())
+				Expect(sdk.WriteSuspend("waiting for dependency")).To(Succeed())
 				content := readFileContent(metadataDir, "workflow-control.yaml")
 				Expect(content).To(MatchYAML(`{suspend: true, message: waiting for dependency}`))
 			})
 		})
 
-		Describe("RetryAfter", func() {
+		Describe("WriteRetryAfter", func() {
 			It("writes workflow-control.yaml with retryAfter", func() {
-				Expect(sdk.RetryAfter("5m", "")).To(Succeed())
+				Expect(sdk.WriteRetryAfter("5m", "")).To(Succeed())
 				content := readFileContent(metadataDir, "workflow-control.yaml")
 				Expect(content).To(MatchYAML(`{retryAfter: 5m}`))
 			})
 
 			It("includes the message when provided", func() {
-				Expect(sdk.RetryAfter("1h30m", "configmap not found yet")).To(Succeed())
+				Expect(sdk.WriteRetryAfter("1h30m", "configmap not found yet")).To(Succeed())
 				content := readFileContent(metadataDir, "workflow-control.yaml")
 				Expect(content).To(MatchYAML(`{retryAfter: 1h30m, message: configmap not found yet}`))
 			})
 
 			It("returns an error when duration is empty", func() {
-				Expect(sdk.RetryAfter("", "")).To(MatchError("duration must be provided"))
+				Expect(sdk.WriteRetryAfter("", "")).To(MatchError("duration must be provided"))
 			})
 
 			It("returns an error when duration is not valid", func() {
-				Expect(sdk.RetryAfter("0.5hour", "")).To(MatchError(ContainSubstring("invalid duration")))
-				Expect(sdk.RetryAfter("11d", "")).To(MatchError(ContainSubstring("invalid duration")))
+				Expect(sdk.WriteRetryAfter("0.5hour", "")).To(MatchError(ContainSubstring("invalid duration")))
+				Expect(sdk.WriteRetryAfter("11d", "")).To(MatchError(ContainSubstring("invalid duration")))
 			})
 		})
 	})
