@@ -243,6 +243,45 @@ var _ = Describe("E2E Tests", func() {
 		})
 	})
 
+	Describe("workflow-control.yaml file", func() {
+		Describe("WriteSuspend", func() {
+			It("writes workflow-control.yaml with suspend: true", func() {
+				Expect(sdk.WriteSuspend("")).To(Succeed())
+				content := readFileContent(metadataDir, "workflow-control.yaml")
+				Expect(content).To(MatchYAML(`{suspend: true}`))
+			})
+
+			It("includes the message when provided", func() {
+				Expect(sdk.WriteSuspend("waiting for dependency")).To(Succeed())
+				content := readFileContent(metadataDir, "workflow-control.yaml")
+				Expect(content).To(MatchYAML(`{suspend: true, message: waiting for dependency}`))
+			})
+		})
+
+		Describe("WriteRetryAfter", func() {
+			It("writes workflow-control.yaml with retryAfter", func() {
+				Expect(sdk.WriteRetryAfter("5m", "")).To(Succeed())
+				content := readFileContent(metadataDir, "workflow-control.yaml")
+				Expect(content).To(MatchYAML(`{retryAfter: 5m}`))
+			})
+
+			It("includes the message when provided", func() {
+				Expect(sdk.WriteRetryAfter("1h30m", "configmap not found yet")).To(Succeed())
+				content := readFileContent(metadataDir, "workflow-control.yaml")
+				Expect(content).To(MatchYAML(`{retryAfter: 1h30m, message: configmap not found yet}`))
+			})
+
+			It("returns an error when duration is empty", func() {
+				Expect(sdk.WriteRetryAfter("", "")).To(MatchError("duration must be provided"))
+			})
+
+			It("returns an error when duration is not valid", func() {
+				Expect(sdk.WriteRetryAfter("0.5hour", "")).To(MatchError(ContainSubstring("invalid duration")))
+				Expect(sdk.WriteRetryAfter("11d", "")).To(MatchError(ContainSubstring("invalid duration")))
+			})
+		})
+	})
+
 	Describe("Workflow type and action helpers", func() {
 		Describe("IsPromiseWorkflow", func() {
 			It("returns true when workflow type is promise", func() {

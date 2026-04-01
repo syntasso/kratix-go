@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/syntasso/kratix/api/v1alpha1"
 	"github.com/syntasso/kratix/work-creator/lib/helpers"
@@ -53,6 +54,18 @@ type SDKInvoker interface {
 	IsConfigureAction() bool
 	// IsDeleteAction returns true if the workflow is a delete action
 	IsDeleteAction() bool
+
+	// WriteSuspend suspends the Workflow by writing workflow-control.yaml with suspend: true.
+	// Kratix will stop any further pipeline execution and set the current pipeline execution phase to Suspended.
+	// If a message is provided, it will be surfaced in the object's status (status.kratix.workflows.pipelines[PIPELINE_NAME].message).
+	WriteSuspend(message string) error
+
+	// WriteRetryAfter configures the current pipeline to be retried after the given duration.
+	// The duration must be a valid Go duration string (e.g. "5m", "1h30m", "300ms").
+	// Kratix will requeue this pipeline after the specified duration and increment
+	// the attempt counter in the object's status (status.kratix.workflows.pipelines[PIPELINE_NAME].attempts).
+	// If a message is provided, it will be surfaced in the object's status (status.kratix.workflows.pipelines[PIPELINE_NAME].message).
+	WriteRetryAfter(duration string, message string) error
 }
 
 // ensure SDKInvoker implemented
@@ -61,7 +74,14 @@ var _ SDKInvoker = (*KratixSDK)(nil)
 const (
 	destinationSelectorsFile = "destination-selectors.yaml"
 	statusFile               = "status.yaml"
+	workflowControlFile      = "workflow-control.yaml"
 )
+
+type workflowControl struct {
+	Suspend    bool   `json:"suspend,omitempty"`
+	RetryAfter string `json:"retryAfter,omitempty"`
+	Message    string `json:"message,omitempty"`
+}
 
 // KratixSDK implements the SDKInvoker interface for reading and writing
 // Kratix workflow data.
@@ -293,4 +313,36 @@ func (k *KratixSDK) IsConfigureAction() bool {
 // IsDeleteAction returns true if the workflow is a delete action
 func (k *KratixSDK) IsDeleteAction() bool {
 	return k.WorkflowAction() == "delete"
+}
+
+// Suspend suspends the Workflow by writing workflow-control.yaml with suspend: true.
+func (k *KratixSDK) WriteSuspend(message string) error {
+	return k.writeWorkflowControl(
+		workflowControl{
+			Suspend: true,
+			Message: message,
+		})
+}
+
+// RetryAfter configures the pipeline to be retried after the given duration.
+func (k *KratixSDK) WriteRetryAfter(duration string, message string) error {
+	if duration == "" {
+		return fmt.Errorf("duration must be provided")
+	}
+	if _, err := time.ParseDuration(duration); err != nil {
+		return fmt.Errorf("invalid duration %q: %w", duration, err)
+	}
+	return k.writeWorkflowControl(
+		workflowControl{
+			RetryAfter: duration,
+			Message:    message,
+		})
+}
+
+func (k *KratixSDK) writeWorkflowControl(wc workflowControl) error {
+	data, err := yaml.Marshal(wc)
+	if err != nil {
+		return fmt.Errorf("marshal workflow control: %w", err)
+	}
+	return k.write(k.metadataDir, workflowControlFile, data)
 }
