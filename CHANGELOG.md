@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0](https://github.com/syntasso/kratix-go/compare/v0.2.0...v0.3.0) (2026-04-01)
+
+
+### Features
+
+* helpers for workflow control file ([#22](https://github.com/syntasso/kratix-go/issues/22)) ([93a7d4d](https://github.com/syntasso/kratix-go/commit/93a7d4d0be855e1eff966657aceb8bae849bff4b))
+
 ## [0.2.0](https://github.com/syntasso/kratix-go/compare/v0.1.0...v0.2.0) (2025-10-29)
 
 
