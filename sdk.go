@@ -212,6 +212,11 @@ func (k *KratixSDK) WriteOutput(relPath string, content []byte) error {
 	return k.write(k.outputDir, relPath, content)
 }
 
+// WriteMetadata writes content to the named file under the metadata directory.
+func (k *KratixSDK) WriteMetadata(relPath string, content []byte) error {
+	return k.write(k.metadataDir, relPath, content)
+}
+
 // WriteStatus writes the provided Status to status.yaml.
 func (k *KratixSDK) WriteStatus(s Status) error {
 	sts, ok := s.(*StatusImpl)

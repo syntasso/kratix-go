@@ -146,6 +146,13 @@ var _ = Describe("E2E Tests", func() {
 					Expect(string(content)).To(Equal("output"))
 				})
 
+				By("writing to the metadata directory, creating any nested directories", func() {
+					err := sdk.WriteMetadata("foo/bar/metadata.yaml", []byte("metadata"))
+					Expect(err).ToNot(HaveOccurred())
+					content := readFileContent(metadataDir, "foo/bar/metadata.yaml")
+					Expect(string(content)).To(Equal("metadata"))
+				})
+
 				By("writing to the destination selectors yaml", func() {
 					err := sdk.WriteDestinationSelectors([]kratix.DestinationSelector{{
 						Directory:   "foo/bar",
